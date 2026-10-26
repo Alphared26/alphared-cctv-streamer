@@ -1,0 +1,10 @@
+{
+  "youtube_client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+  "youtube_client_secret": "YOUR_GOOGLE_CLIENT_SECRET",
+  "youtube_refresh_token": "YOUR_OAUTH_REFRESH_TOKEN",
+  "youtube_playlist_id": "PLxxxxxxxxxxxx",
+  "live_duration_minutes": 715,
+  "record_segment_seconds": 3600,
+  "disk_guard_min_gb": 20,
+  "disk_retention_days": 3
+}

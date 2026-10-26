@@ -1,0 +1,29 @@
+# Binaries & build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+alphared-streamer
+tapo-youtube-streamer
+
+# Backups & archives
+backups/
+*.tar.gz
+*.bak
+*.zip
+
+# Runtime data & sensitive configs
+cameras.json
+settings.json
+youtube_token.json
+.env
+.env.*
+
+# OS & IDE metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~

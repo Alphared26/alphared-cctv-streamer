@@ -1,0 +1,2606 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Alphared NVR &amp; Streamer</title>
+<style>
+:root{
+  --bg:#08090a;--bg-panel:#0f1011;--bg-card:#191a1b;--bg-card-hover:#1e1f21;
+  --bg-hover:#28282c;--bg-row:#17181a;--bg-input:#0b0c0d;--bg-menu:#161719;--bg-dialog:#131415;
+  --border-subtle:rgba(255,255,255,.05);--border:rgba(255,255,255,.08);
+  --border-solid:#23252a;--border-strong:#34343a;
+  --fg:#f7f8f8;--fg-2:#d0d6e0;--fg-3:#8a8f98;--fg-4:#62666d;
+  --accent:#5e6ad2;--accent-hover:#7170ff;--accent-bright:#828fff;
+  --accent-soft:rgba(94,106,210,.16);--accent-ring:rgba(113,112,255,.45);--on-accent:#ffffff;
+  --green:#27a644;--green-fg:#3ecf63;--green-soft:rgba(39,166,68,.14);
+  --emerald:#10b981;--red:#e5484d;--red-fg:#ff6369;--red-soft:rgba(229,72,77,.14);
+  --amber:#f5a524;--amber-fg:#f7b955;--amber-soft:rgba(245,165,36,.12);
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-full:999px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s7:32px;--s8:40px;--s9:48px;
+  --sh-1:0 1px 2px rgba(0,0,0,.4);--sh-2:0 4px 12px rgba(0,0,0,.45);
+  --sh-3:0 10px 30px rgba(0,0,0,.55),0 0 0 1px var(--border);
+  --inset-hi:inset 0 1px 0 rgba(255,255,255,.03);
+  --dur-1:80ms;--dur-2:140ms;--dur-3:220ms;
+  --ease:cubic-bezier(.2,.7,.3,1);--ease-out:cubic-bezier(.16,1,.3,1);
+  --sidebar-w:216px;--topbar-h:44px;--content-max:1440px;--grid-min:292px;
+  --z-nav:10;--z-menu:40;--z-toast:60;--z-dialog:70;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 13px/20px var(--font-ui);
+  -webkit-font-smoothing:antialiased;height:100vh;overflow:hidden}
+h1,h2,h3,h4,p,dl,dd,dt,figure{margin:0}
+button{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px;border-radius:var(--r-xs)}
+::selection{background:var(--accent-soft)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* icons */
+.ico{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.ico-sm{width:14px;height:14px}
+.ico-xs{width:12px;height:12px}
+
+/* shell */
+.app{display:flex;height:100vh;overflow:hidden}
+.side{width:var(--sidebar-w);flex:none;background:var(--bg-panel);border-right:1px solid var(--border-subtle);
+  display:flex;flex-direction:column;padding:10px 8px 8px;gap:2px;overflow:hidden}
+.brand{display:flex;align-items:center;gap:8px;padding:2px 8px 10px;min-width:0}
+.brand .mk{width:24px;height:24px;flex:none;border:1px solid var(--border-solid);border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;color:var(--accent-bright);background:var(--bg-card)}
+.brand b{display:block;font-size:12.5px;font-weight:600;letter-spacing:-.005em;white-space:nowrap}
+.brand span{display:block;font-size:11px;color:var(--fg-3);white-space:nowrap}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav-grp{font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--fg-3);
+  padding:10px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border-radius:var(--r-sm);
+  font:500 13px/1 var(--font-ui);color:var(--fg-3);cursor:pointer;text-decoration:none;white-space:nowrap;
+  transition:background-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.nav-item:hover{background:var(--bg-hover);color:var(--fg)}
+.nav-item[aria-current="page"]{background:var(--bg-hover);color:var(--fg);box-shadow:inset 2px 0 0 var(--accent)}
+.nav-sep{height:1px;background:var(--border-subtle);margin:6px 4px}
+.rail{margin-top:auto;padding:8px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:7px}
+.rail .row{display:flex;justify-content:space-between;font-size:11px;color:var(--fg-3);
+  letter-spacing:.04em;text-transform:uppercase}
+.rail .row b{font:400 11px/14px var(--font-mono);color:var(--fg-2);letter-spacing:0;text-transform:none}
+.col{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.top{height:var(--topbar-h);flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;
+  background:var(--bg);border-bottom:1px solid var(--border-subtle)}
+.top-l{display:flex;align-items:center;gap:10px;min-width:0}
+.top-title{font:500 13px/1 var(--font-ui);color:var(--fg);letter-spacing:-.005em;white-space:nowrap}
+.top-r{margin-left:auto;display:flex;align-items:center;gap:14px}
+.top-meta{font:400 11.5px/1 var(--font-mono);color:var(--fg-3);white-space:nowrap}
+main{flex:1;overflow:auto;overscroll-behavior:contain}
+.page{max-width:var(--content-max);margin:0 auto;padding:24px 24px 64px}
+.page-h{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+.page-h h1{font-size:20px;line-height:28px;font-weight:600;letter-spacing:-.015em}
+.page-h p{font-size:12px;line-height:16px;color:var(--fg-3);margin-top:2px;max-width:72ch}
+.page-h .sp{flex:1}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar .sp{flex:1}
+.cols-ctl{display:inline-flex;padding:2px;gap:2px;background:var(--bg-panel);
+  border:1px solid var(--border);border-radius:8px}
+.cols-ctl button{height:24px;min-width:26px;padding:0 7px;border:0;border-radius:6px;
+  background:transparent;color:var(--fg-3);font:500 12px/1 var(--font-ui);cursor:pointer}
+.cols-ctl button:hover{color:var(--fg)}
+.cols-ctl button[aria-pressed="true"]{background:var(--bg-hover);color:var(--fg);box-shadow:var(--sh-1)}
+.count{font:400 11.5px/1 var(--font-mono);color:var(--fg-3)}
+
+/* button */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 11px;
+  border-radius:var(--r-sm);border:1px solid transparent;font:500 13px/1 var(--font-ui);color:var(--fg);
+  background:transparent;cursor:pointer;user-select:none;white-space:nowrap;position:relative;text-decoration:none;
+  transition:background-color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.btn:active{transform:translateY(.5px)}
+.btn:disabled,.btn[aria-disabled="true"]{opacity:.45;pointer-events:none;cursor:not-allowed}
+.btn-sm{height:26px;padding:0 8px;font-size:12px;gap:5px}
+.btn-lg{height:34px;padding:0 14px}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn-primary:active{background:#5560c4;border-color:#5560c4}
+.btn-secondary{background:var(--bg-card);border-color:var(--border-solid);color:var(--fg)}
+.btn-secondary:hover{background:var(--bg-hover);border-color:var(--border-strong)}
+.btn-ghost{color:var(--fg-2)}
+.btn-ghost:hover{background:var(--bg-hover);color:var(--fg)}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-danger:hover{background:#f2555a;border-color:#f2555a}
+.btn-danger-ghost{color:var(--red-fg)}
+.btn-danger-ghost:hover{background:var(--red-soft)}
+.btn-danger:focus-visible,.btn-danger-ghost:focus-visible{outline:2px solid var(--red-fg)}
+.btn.is-loading{pointer-events:none;color:transparent}
+.btn.is-loading .lbl,.btn.is-loading .ico{visibility:hidden}
+.btn.is-loading::after{content:"";position:absolute;width:13px;height:13px;border-radius:50%;
+  border:1.5px solid currentColor;border-top-color:transparent;color:var(--fg-2);
+  animation:spin .6s linear infinite}
+.btn-primary.is-loading::after{color:var(--on-accent)}
+.btn-icon{width:26px;height:26px;padding:0;border-color:transparent;color:var(--fg-3)}
+.btn-icon:hover{background:var(--bg-hover);color:var(--fg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* badge */
+.badge{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:var(--r-xs);
+  border:1px solid var(--border-subtle);font:500 11px/1 var(--font-ui);letter-spacing:.02em;
+  text-transform:uppercase;white-space:nowrap}
+.badge-sm{height:18px;font-size:10.5px;padding:0 6px}
+.badge-neutral{background:var(--bg-hover);color:var(--fg-2)}
+.badge-rec{background:var(--green-soft);color:var(--green-fg);border-color:rgba(39,166,68,.28)}
+.badge-live{background:var(--red-soft);color:var(--red-fg);border-color:rgba(229,72,77,.28)}
+.badge-offline{background:transparent;color:var(--fg-3);border-color:var(--border-solid)}
+.badge-warn{background:var(--amber-soft);color:var(--amber-fg);border-color:rgba(245,165,36,.28)}
+.badge-ok{background:var(--green-soft);color:var(--green-fg);border-color:rgba(39,166,68,.28)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.dot-rec{animation:pulse 2s var(--ease) infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* card */
+.grid{display:grid;grid-template-columns:repeat(var(--cols,1),minmax(0,1fr));gap:12px;
+  max-width:var(--grid-max,1440px);margin-inline:auto}
+.grid[data-cols="1"]{--grid-max:680px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);
+  box-shadow:var(--inset-hi);overflow:hidden;content-visibility:auto;contain-intrinsic-size:0 264px;
+  transition:background-color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
+.card:hover{border-color:var(--border-solid);background:var(--bg-card-hover)}
+.card-media{position:relative;aspect-ratio:16/9;background:#0b0c0d;
+  border-bottom:1px solid var(--border-subtle);overflow:hidden}
+.snap-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.live-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:#000}
+.card-media .live-btn{position:absolute;right:6px;bottom:6px;z-index:2;height:24px;padding:0 8px;
+  background:rgba(0,0,0,.55);border-color:transparent;color:#e7e9ec;font-size:11.5px}
+.card-media .live-btn:hover{background:rgba(0,0,0,.8);color:#fff}
+.card-media .live-btn[aria-pressed="true"]{background:var(--red);color:#fff;border-color:var(--red)}
+.badges{position:absolute;top:8px;left:8px;display:flex;gap:6px;z-index:2}
+.card-media .more{position:absolute;top:6px;right:6px;z-index:2;background:rgba(0,0,0,.45);
+  border-color:transparent;color:#e7e9ec}
+.card-media .more:hover{background:rgba(0,0,0,.7);color:#fff}
+.stamp{position:absolute;left:8px;bottom:6px;z-index:2;font:400 10.5px/14px var(--font-mono);
+  color:rgba(255,255,255,.82);text-shadow:0 1px 2px #000;letter-spacing:.02em}
+.media-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;color:var(--fg-4);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.card-body{padding:12px}
+.card-head{display:flex;align-items:flex-start;gap:8px}
+.card-name{font-size:13px;font-weight:500;color:var(--fg);letter-spacing:-.005em;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.card-sub{font-size:11.5px;color:var(--fg-3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-stats{display:flex;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-subtle)}
+.stat{display:flex;flex-direction:column;gap:1px;min-width:0}
+.stat dt{font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--fg-3)}
+.stat dd{font:400 12px/16px var(--font-mono);color:var(--fg);font-variant-numeric:tabular-nums}
+.card-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+.notice{display:flex;align-items:flex-start;gap:6px;margin-top:10px;padding:6px 8px;border-radius:var(--r-sm);
+  background:var(--amber-soft);color:var(--amber-fg);font-size:11.5px;line-height:16px;
+  border:1px solid rgba(245,165,36,.22)}
+.notice-err{background:var(--red-soft);color:var(--red-fg);border-color:rgba(229,72,77,.28)}
+.card--rec .card-media{border-bottom-color:rgba(39,166,68,.25)}
+.card--live .card-media{border-bottom-color:rgba(229,72,77,.25)}
+.card--offline .card-media{background:repeating-linear-gradient(135deg,#0e0f10 0 6px,#0b0c0d 6px 12px)}
+.card--offline .snap-img,.card--offline .stamp{display:none}
+/* ── fullscreen ───────────────────────────────────────────────────────────
+   Elemen .card-media sendiri yang di-fullscreen, bukan <video> dipindah.
+   Tidak ada koneksi RTSP baru, MSE tidak reset. object-fit:contain supaya
+   tepi gambar CCTV tidak terpotong. */
+.card-media:fullscreen{aspect-ratio:auto;width:100vw;height:100vh;background:#000;
+  border:0;display:block;overflow:hidden}
+/* Video tetap absolute seperti keadaan normal. Sempat dicoba flex+static dan
+   itu salah: konten meluber (scrollWidth 1200 > clientWidth 800) sehingga
+   justify-content:center menggeser video 400px dan gambar terbelah dua. */
+.card-media:fullscreen .live-vid,
+.card-media:fullscreen .snap-img{object-fit:contain;position:absolute;inset:0;
+  width:100%;height:100%}
+.card-media:fullscreen .badges{top:12px;left:12px}
+.card-media:fullscreen .stamp{bottom:52px;left:12px;font-size:12px}
+.card-media .fs-bar{display:none}
+.card-media:fullscreen .fs-bar{display:flex;position:absolute;left:0;right:0;bottom:0;
+  align-items:center;gap:10px;padding:10px 14px;background:rgba(0,0,0,.72);
+  border-top:1px solid rgba(255,255,255,.1);z-index:3}
+.fs-bar .fs-name{font:500 13px/1 var(--font-ui);color:#fff;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.fs-bar .fs-meta{font:400 11.5px/1 var(--font-mono);color:rgba(255,255,255,.72);white-space:nowrap}
+.fs-bar .sp{flex:1}
+.card-media:fullscreen .live-btn,
+.card-media:fullscreen .more,
+.card-media:fullscreen .fs-btn{display:none}
+.card-media .fs-btn{position:absolute;right:6px;top:6px;z-index:2;width:26px;height:26px;padding:0;
+  background:rgba(0,0,0,.45);border-color:transparent;color:#e7e9ec}
+.card-media .fs-btn:hover{background:rgba(0,0,0,.7);color:#fff}
+.card-media .more{right:38px}
+.card--err{border-color:rgba(229,72,77,.35)}
+.media-err{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;background:#0d0e0f;text-align:center;padding:8px}
+.media-err .ico{color:var(--red-fg)}
+.media-err span{font-size:12px;color:var(--fg-3)}
+
+/* field */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label{font-size:12px;font-weight:500;color:var(--fg-2)}
+.input{width:100%;height:30px;padding:0 9px;background:var(--bg-input);border:1px solid var(--border-solid);
+  border-radius:var(--r-sm);color:var(--fg);font:400 13px/1 var(--font-ui);
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.input::placeholder{color:var(--fg-4)}
+.input:hover{border-color:var(--border-strong)}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(94,106,210,.22)}
+.input:disabled{opacity:.45;cursor:not-allowed;background:var(--bg-panel)}
+.mono{font-family:var(--font-mono);font-size:12px}
+.help{font-size:11.5px;line-height:16px;color:var(--fg-3)}
+.help-err{color:var(--red-fg)}
+.sel{position:relative}
+.sel select{width:100%;height:30px;padding:0 26px 0 9px;appearance:none;cursor:pointer;
+  background:var(--bg-input);border:1px solid var(--border-solid);border-radius:var(--r-sm);
+  color:var(--fg);font:400 13px/1 var(--font-ui);
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.sel select:hover{border-color:var(--border-strong)}
+.sel select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(94,106,210,.22)}
+.sel .ico{position:absolute;right:8px;top:50%;margin-top:-7px;color:var(--fg-3);pointer-events:none}
+.check{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--fg-2);
+  padding:4px 2px;user-select:none}
+.check input{appearance:none;width:15px;height:15px;flex:none;margin:0;border-radius:var(--r-xs);
+  border:1px solid var(--border-strong);background:var(--bg-input);cursor:pointer;
+  transition:background-color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease)}
+.check input:checked{background:var(--accent);border-color:var(--accent)}
+.check input:checked::after{content:"";display:block;width:8px;height:4px;margin:3.5px 0 0 3px;
+  border-left:1.6px solid #fff;border-bottom:1.6px solid #fff;transform:rotate(-45deg)}
+.check input:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px}
+.check input:disabled{opacity:.45;cursor:not-allowed}
+.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--fg-2);
+  user-select:none}
+.switch input{appearance:none;width:32px;height:18px;margin:0;border-radius:var(--r-full);
+  background:var(--bg-hover);border:1px solid var(--border-strong);position:relative;cursor:pointer;
+  transition:background-color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease)}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;
+  background:var(--fg-3);transition:transform var(--dur-2) var(--ease),background-color var(--dur-2) var(--ease)}
+.switch input:checked{background:var(--accent);border-color:var(--accent)}
+.switch input:checked::after{transform:translateX(14px);background:#fff}
+.switch input:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid .full{grid-column:1/-1}
+
+/* segmented */
+.seg{display:inline-flex;padding:2px;gap:2px;background:var(--bg-panel);border:1px solid var(--border);
+  border-radius:8px}
+.seg button{height:26px;padding:0 12px;border:0;border-radius:6px;background:transparent;
+  font:500 12.5px/1 var(--font-ui);color:var(--fg-3);cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:background-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-selected="true"]{background:var(--bg-hover);color:var(--fg);box-shadow:var(--sh-1)}
+.seg button:focus-visible{outline:2px solid var(--accent-bright);outline-offset:1px}
+.seg button:disabled{opacity:.45;pointer-events:none}
+
+/* rows */
+.tbl{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;
+  display:flex;flex-direction:column;min-height:0}
+.tbl-h,.trow{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:12px;align-items:center;
+  padding:0 10px;height:36px;font-size:12.5px}
+.tbl-h{height:30px;font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--fg-4);border-bottom:1px solid var(--border-subtle);flex:none}
+.trow{border-radius:var(--r-sm);margin:2px 4px;padding:0 6px;color:var(--fg-2);cursor:pointer;
+  transition:background-color var(--dur-1) var(--ease)}
+.trow:hover{background:var(--bg-row)}
+.trow.is-sel{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+.trow .f{font:400 12px/1 var(--font-mono);color:var(--fg-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .m{font:400 12px/1 var(--font-mono);color:var(--fg-3);font-variant-numeric:tabular-nums;text-align:right;
+  white-space:nowrap}
+.trow .acts{display:flex;gap:2px;opacity:0;transition:opacity var(--dur-1) var(--ease)}
+.trow:hover .acts,.trow:focus-within .acts{opacity:1}
+.tlist{overflow:auto;min-height:0;flex:1}
+.batch{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-card);
+  border-top:1px solid var(--border-solid);font-size:12px;color:var(--fg-3);flex:none}
+.batch .sp{flex:1}
+.batch[hidden]{display:none}
+
+/* toast */
+.toasts{position:fixed;right:16px;bottom:16px;z-index:var(--z-toast);display:flex;flex-direction:column;
+  gap:8px;pointer-events:none}
+.toast{display:flex;gap:10px;align-items:flex-start;min-width:280px;max-width:380px;padding:10px 12px;
+  background:var(--bg-menu);border:1px solid var(--border-solid);border-radius:8px;box-shadow:var(--sh-2);
+  pointer-events:auto;animation:toastIn var(--dur-3) var(--ease-out)}
+@keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.toast.out{opacity:0;transition:opacity 120ms linear}
+.toast .ic{margin-top:1px;flex:none}
+.toast b{display:block;font-size:12.5px;font-weight:500;color:var(--fg);letter-spacing:-.005em}
+.toast p{font-size:12px;line-height:17px;color:var(--fg-3);margin-top:1px;word-break:break-word}
+.toast .x{margin-left:auto}
+.toast-ok{border-color:rgba(39,166,68,.28)}.toast-ok .ic{color:var(--green-fg)}
+.toast-err{border-color:rgba(229,72,77,.3)}.toast-err .ic{color:var(--red-fg)}
+.toast-warn{border-color:rgba(245,165,36,.28)}.toast-warn .ic{color:var(--amber-fg)}
+.toast-info{border-color:rgba(94,106,210,.35)}.toast-info .ic{color:var(--accent-bright)}
+
+/* dialog */
+.scrim{position:fixed;inset:0;z-index:var(--z-dialog);background:rgba(0,0,0,.6);
+  display:flex;align-items:center;justify-content:center;padding:16px}
+.scrim[hidden]{display:none}
+.dialog{width:min(420px,100vw - 32px);background:var(--bg-dialog);border:1px solid var(--border-solid);
+  border-radius:var(--r-lg);box-shadow:var(--sh-3);padding:16px;max-height:calc(100vh - 32px);
+  display:flex;flex-direction:column;animation:dlgIn var(--dur-3) var(--ease-out)}
+.dialog.wide{width:min(600px,100vw - 32px)}
+@keyframes dlgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dialog-h{display:flex;gap:10px;align-items:flex-start;flex:none}
+.dialog-h .ic{color:var(--red-fg);margin-top:1px;flex:none}
+.dialog-h h3{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.dialog p{font-size:13px;line-height:20px;color:var(--fg-3);margin-top:8px;max-width:46ch}
+.dialog p b{color:var(--fg-2);font-weight:500}
+.dialog-b{overflow:auto;margin-top:8px;min-height:0}
+.dialog-f{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:12px;
+  border-top:1px solid var(--border-subtle);flex:none}
+
+/* empty / skeleton */
+.empty{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+  padding:32px 16px;border:1px dashed var(--border-solid);border-radius:var(--r-md)}
+.empty .ic{color:var(--fg-4)}
+.empty b{font-size:13px;font-weight:500;color:var(--fg-2)}
+.empty p{font-size:12px;color:var(--fg-3);max-width:40ch}
+.sk{background:#1b1c1e;border-radius:var(--r-xs);animation:sk 1.6s ease-in-out infinite}
+.sk-line{height:12px;width:60%}
+.sk-title{height:14px;width:42%}
+.sk-media{aspect-ratio:16/9;width:100%;border-radius:0}
+@keyframes sk{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* menu */
+.menu{position:fixed;min-width:176px;padding:4px;background:var(--bg-menu);
+  border:1px solid var(--border-solid);border-radius:8px;box-shadow:var(--sh-3);z-index:var(--z-menu)}
+.menu[hidden]{display:none}
+.menu button{display:flex;align-items:center;gap:8px;width:100%;height:28px;padding:0 8px;border:0;
+  border-radius:5px;background:transparent;font:400 12.5px/1 var(--font-ui);color:var(--fg-2);
+  cursor:pointer;text-align:left;
+  transition:background-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.menu button .ico{color:var(--fg-3)}
+.menu button:hover,.menu button:focus-visible{background:var(--bg-hover);color:var(--fg)}
+.menu .danger{color:var(--red-fg)}.menu .danger .ico{color:var(--red-fg)}
+.menu .danger:hover{background:var(--red-soft);color:var(--red-fg)}
+.menu hr{border:0;border-top:1px solid var(--border-subtle);margin:4px 0}
+
+/* panels / meters */
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:12px;margin-top:16px}
+.panel{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r-md);padding:14px}
+.panel-h{display:flex;align-items:center;gap:6px;color:var(--fg-3);margin-bottom:8px}
+.panel-h span{font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.panel-h .sp{flex:1}
+.panel-big{font-size:20px;line-height:28px;font-weight:600;letter-spacing:-.015em;
+  font-variant-numeric:tabular-nums;color:var(--fg)}
+.panel-big small{font-size:12px;font-weight:400;letter-spacing:0;color:var(--fg-3)}
+.meter{height:4px;border-radius:2px;background:var(--bg-hover);overflow:hidden;margin-top:8px}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:2px}
+.meter i.warn{background:var(--amber)}
+.meter i.crit{background:var(--red)}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--fg-3);padding:3px 0}
+.kv b{font-weight:400;color:var(--fg);font-family:var(--font-mono);font-size:11.5px;
+  font-variant-numeric:tabular-nums;text-align:right}
+.kv b.ok{color:var(--green-fg)}.kv b.warn{color:var(--amber-fg)}.kv b.crit{color:var(--red-fg)}
+
+/* playback */
+.pb{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;align-items:start}
+.player{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;
+  display:flex;flex-direction:column}
+.player-h{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border-subtle)}
+.player-h .t{font-size:13px;font-weight:500;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-h .s{font:400 11.5px/16px var(--font-mono);color:var(--fg-3);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.player-h .sp{flex:1}
+.vwrap{background:#000;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center}
+.vwrap video{width:100%;height:100%;background:#000;display:block}
+.player-f{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--border-subtle);
+  flex-wrap:wrap}
+.player-f .lbl2{font-size:11.5px;color:var(--fg-4);letter-spacing:.04em;text-transform:uppercase}
+.player-f .sp{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:28px;padding:0 10px;border:1px solid var(--border-solid);border-radius:var(--r-sm);
+  background:var(--bg-card);color:var(--fg-2);font:500 12px/1 var(--font-mono);cursor:pointer;
+  transition:background-color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.chip:hover{background:var(--bg-hover);border-color:var(--border-strong);color:var(--fg)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+
+/* log */
+.logbox{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;
+  font:400 12px/18px var(--font-mono);color:var(--fg-2);white-space:pre-wrap;word-break:break-word;
+  overflow:auto;height:calc(100vh - 330px);min-height:260px;user-select:text}
+.logbox.muted{color:var(--fg-3)}
+.logbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.logbar .sp{flex:1}
+.logmeta{display:flex;align-items:center;gap:10px;margin-top:8px;font:400 11px/14px var(--font-mono);
+  color:var(--fg-4)}
+
+/* settings + guide */
+.set{display:flex;flex-direction:column;gap:24px;max-width:640px}
+.grp{border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-panel);padding:16px}
+.grp-h{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.grp-h h2{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.grp-h .ico{color:var(--fg-3)}
+.grp>p{font-size:11.5px;line-height:16px;color:var(--fg-3);margin-bottom:12px}
+.grp .fields{display:flex;flex-direction:column;gap:12px}
+.savebar{display:flex;align-items:center;gap:12px;padding-top:4px}
+.savebar .st{font-size:11.5px;color:var(--fg-3)}
+.savebar .st.ok{color:var(--green-fg)}.savebar .st.err{color:var(--red-fg)}
+.savebar .sp{flex:1}
+.prose{max-width:72ch;font-size:13.5px;line-height:1.65;color:var(--fg-2);white-space:pre-wrap;
+  word-break:break-word;user-select:text}
+.oauth{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border-solid);
+  border-radius:var(--r-sm);background:var(--bg-card);font-size:12px;color:var(--fg-2)}
+.oauth .sp{flex:1}
+.code-row{display:flex;gap:8px;margin-top:8px}
+.code-row .input{flex:1}
+
+@media (max-width:1023px){
+  .pb{grid-template-columns:1fr}
+}
+@media (max-width:899px){
+  .side{width:56px;padding:10px 6px 8px}
+  .brand span,.brand b,.nav-item span,.nav-grp,.rail{display:none}
+  .brand{padding:2px 0 10px;justify-content:center}
+  .nav-item{justify-content:center;padding:0}
+  .top{padding:0 16px}
+  .page{padding:20px 16px 56px}
+}
+@media (max-width:768px){
+  .app{display:block;height:100vh;overflow:hidden}
+  .col{width:100%;height:100%;display:flex;flex-direction:column}
+  .side{position:fixed;inset:auto 0 0 0;width:100%;height:calc(56px + env(safe-area-inset-bottom,0px));
+    padding:0 0 env(safe-area-inset-bottom,0px);background:rgba(15,16,17,.94);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-right:none;
+    border-top:1px solid var(--border-solid);z-index:var(--z-nav);flex-direction:row;
+    align-items:center;box-shadow:0 -4px 16px rgba(0,0,0,.5)}
+  .brand,.rail,.nav-grp,.nav-sep,.nav-item[data-nav="panduan"]{display:none!important}
+  .nav{display:flex;flex-direction:row;width:100%;height:100%;gap:0;align-items:stretch;justify-content:space-around}
+  .nav-item{flex:1 1 0;min-width:0;height:100%;padding:6px 2px;border-radius:0;flex-direction:column;
+    justify-content:center;align-items:center;gap:3px;color:var(--fg-3);background:transparent}
+  .nav-item .ico{width:18px;height:18px;stroke-width:1.8}
+  .nav-item span{display:block!important;font-size:10px;font-weight:500;line-height:1;letter-spacing:-.01em;white-space:nowrap}
+  .nav-item[data-nav="monitor"] span{font-size:0}
+  .nav-item[data-nav="monitor"] span::after{content:"Kamera";font-size:10px}
+  .nav-item[aria-current="page"]{background:transparent;color:var(--fg);box-shadow:none;position:relative}
+  .nav-item[aria-current="page"]::after{content:"";position:absolute;top:0;left:22%;right:22%;height:2px;
+    background:var(--accent);border-radius:0 0 2px 2px}
+  main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .page{width:100%;max-width:100%;margin:0;padding:14px 14px calc(72px + env(safe-area-inset-bottom,0px))}
+  .page-h{flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px}
+  .page-h h1{font-size:18px;line-height:24px}
+  .page-h p{font-size:11.5px;line-height:15px}
+  .page-h .sp{display:none}
+  .top{height:40px;padding:0 12px;gap:8px;justify-content:space-between}
+  .top-meta{font-size:11px}
+  .grid{grid-template-columns:1fr!important;max-width:100%}
+  .cols-ctl{display:none}
+  .card-actions{grid-template-columns:1fr;gap:8px;margin-top:10px}
+  .card-actions .btn{min-height:42px;height:42px;font-size:13px}
+  .card-media .live-btn{height:32px;min-height:32px;padding:0 10px}
+  .card-media .fs-btn,.card-media .more{width:36px;height:36px}
+  .toolbar{flex-direction:column;align-items:stretch;gap:8px;margin-bottom:10px}
+  .toolbar .sel,.toolbar .sel[style]{width:100%!important}
+  .toolbar .btn{height:40px;min-height:40px;width:100%;justify-content:center}
+  .toolbar .sp{display:none}
+  .toolbar .count{text-align:right;padding-top:2px}
+  .chips{gap:6px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;height:34px;padding:0 12px}
+  .pb{grid-template-columns:1fr;gap:12px}
+  .player-f{flex-direction:column;align-items:stretch;gap:8px}
+  .player-f .seg{width:100%;display:flex}
+  .player-f .seg button{flex:1;height:36px;justify-content:center}
+  .tbl{max-height:420px}
+  .tbl-h,.trow{grid-template-columns:auto 1fr auto auto;gap:8px;padding:0 8px;height:40px}
+  .trow .acts{opacity:1}
+  .set{max-width:100%;gap:14px}
+  .grp{padding:12px}
+  .fgrid{grid-template-columns:1fr}
+  .input,.sel select{height:40px;font-size:13px}
+  .code-row{flex-direction:column;gap:8px}
+  .code-row .btn{height:40px;min-height:40px;width:100%}
+  .savebar{flex-direction:column-reverse;align-items:stretch;gap:8px}
+  .savebar .btn{min-height:42px;height:42px;width:100%}
+  .logbar{flex-direction:column;align-items:stretch;gap:8px}
+  .logbar .seg{width:100%;display:flex}
+  .logbar .seg button{flex:1;height:36px;justify-content:center}
+  .logbar .sel,.logbar .sel[style],.logbar #log-filter,.logbar #log-filter[style]{width:100%!important}
+  .logbar .sp{display:none}
+  .logbox{height:calc(100vh - 410px);min-height:240px;font-size:11px;line-height:16px;padding:8px 10px}
+  .dialog,.dialog.wide{width:calc(100vw - 24px);max-height:calc(100vh - 40px);padding:14px}
+  .dialog-f{flex-direction:column-reverse;gap:8px}
+  .dialog-f .btn{min-height:42px;height:42px;width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+  .dot-rec{opacity:1}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h7A2.5 2.5 0 0 1 15 8.5v7A2.5 2.5 0 0 1 12.5 18h-7A2.5 2.5 0 0 1 3 15.5z"/><path d="m15 11 5-3v8l-5-3z"/></symbol>
+<symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-broadcast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 16.5a6.4 6.4 0 0 0 0-9M4.9 4.9a10 10 0 0 0 0 14.2M19.1 19.1a10 10 0 0 0 0-14.2"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+<symbol id="i-playback" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10.4 9.2 15 12l-4.6 2.8z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-logs" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+<symbol id="i-storage" viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="7" ry="2.8"/><path d="M5 6.5v11c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-11"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8"/></symbol>
+<symbol id="i-cpu" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></symbol>
+<symbol id="i-ram" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 16v3M12 16v3M17 16v3M7 8V5M12 8V5"/></symbol>
+<symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M3 5l18 18"/><path d="M8.5 13.5a5 5 0 0 1 7 0"/><path d="M5 10a10 10 0 0 1 3.5-2.2"/><path d="M15.5 7.8A10 10 0 0 1 19 10"/><circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 2"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.5 3.5 19h17z"/><path d="M12 10v4M12 16.8h.01"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
+<symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></symbol>
+<symbol id="i-collapse" viewBox="0 0 24 24"><path d="M3 8h3a2 2 0 0 0 2-2V3M21 8h-3a2 2 0 0 1-2-2V3M16 21v-3a2 2 0 0 1 2-2h3M8 21v-3a2 2 0 0 0-2-2H3"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v10"/><path d="m8 11 4 4 4-4"/><path d="M5 18.5h14"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6.5 7l.8 12h9.4l.8-12"/><path d="M10.5 11v5M13.5 11v5"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M6 15H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v1"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4.5V9h-4.5"/></symbol>
+<symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+<symbol id="i-youtube" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="m10.5 9.5 5 2.5-5 2.5z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+</svg>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="mk"><svg class="ico"><use href="#i-camera"/></svg></div>
+      <span><b>Alphared NVR</b><span>Streamer</span></span>
+    </div>
+    <nav class="nav" aria-label="Navigasi utama">
+      <div class="nav-grp">Pemantauan</div>
+      <a class="nav-item" href="#monitor" data-nav="monitor"><svg class="ico" aria-hidden="true"><use href="#i-camera"/></svg><span>Monitor</span></a>
+      <a class="nav-item" href="#rekaman" data-nav="rekaman"><svg class="ico" aria-hidden="true"><use href="#i-playback"/></svg><span>Rekaman</span></a>
+      <a class="nav-item" href="#log" data-nav="log"><svg class="ico" aria-hidden="true"><use href="#i-logs"/></svg><span>Log</span></a>
+      <div class="nav-sep"></div>
+      <div class="nav-grp">Sistem</div>
+      <a class="nav-item" href="#pengaturan" data-nav="pengaturan"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg><span>Pengaturan</span></a>
+      <a class="nav-item" href="#panduan" data-nav="panduan"><svg class="ico" aria-hidden="true"><use href="#i-youtube"/></svg><span>Panduan</span></a>
+    </nav>
+    <div class="rail" aria-label="Beban server">
+      <div class="row"><span>CPU</span><b id="railCpu" class="num">—</b></div>
+      <div class="meter"><i id="railCpuBar" style="width:0"></i></div>
+      <div class="row"><span>RAM</span><b id="railRam" class="num">—</b></div>
+      <div class="meter"><i id="railRamBar" style="width:0"></i></div>
+      <div class="row"><span>HDD</span><b id="railDisk" class="num">—</b></div>
+      <div class="meter"><i id="railDiskBar" style="width:0"></i></div>
+    </div>
+  </aside>
+
+  <div class="col">
+    <header class="top">
+      <div class="top-l">
+        <span class="badge badge-neutral" id="statusPill">—</span>
+      </div>
+      <div class="top-r">
+        <span class="top-meta" id="clock">--:--:--</span>
+      </div>
+    </header>
+    <main id="main" tabindex="-1"></main>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" role="region" aria-live="polite"></div>
+<div class="menu" id="menu" role="menu" hidden></div>
+<div class="sr" id="liveRegion" role="status" aria-live="polite"></div>
+
+<div class="scrim" id="scrimAsk" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="askT" aria-describedby="askD">
+    <div class="dialog-h"><svg class="ico" aria-hidden="true" id="askIco"><use href="#i-alert"/></svg><h3 id="askT">Konfirmasi</h3></div>
+    <p id="askD"></p>
+    <div class="dialog-f">
+      <button type="button" class="btn btn-secondary" id="askCancel">Batal</button>
+      <button type="button" class="btn btn-danger" id="askOk">Hapus permanen</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrimForm" hidden>
+  <div class="dialog wide" role="dialog" aria-modal="true" aria-labelledby="formT">
+    <div class="dialog-h"><svg class="ico" aria-hidden="true" style="color:var(--fg-2)"><use href="#i-camera"/></svg><h3 id="formT">Tambah Kamera</h3></div>
+    <form class="dialog-b" id="camera-form" novalidate>
+      <input type="hidden" id="form-camera-id" value="">
+      <div class="fgrid">
+        <div class="field full"><label for="form-name">Nama kamera</label>
+          <input class="input" id="form-name" required placeholder="C200C TERAS"></div>
+        <div class="field full"><label for="form-rtsp">RTSP stream utama</label>
+          <input class="input mono" id="form-rtsp" required placeholder="rtsp://admin:pass@192.168.1.100:554/stream1"></div>
+        <div class="field full"><label for="form-rtsp-sub">RTSP sub stream <span class="help">(opsional, untuk pratinjau)</span></label>
+          <input class="input mono" id="form-rtsp-sub" placeholder="rtsp://admin:pass@192.168.1.100:554/stream2"></div>
+        <div class="field"><label for="form-rtmp">RTMP ingest</label>
+          <input class="input mono" id="form-rtmp" value="rtmp://a.rtmp.youtube.com/live2"></div>
+        <div class="field"><label for="form-key">Stream key YouTube</label>
+          <input class="input mono" id="form-key" type="password" placeholder="xxxx-xxxx-xxxx-xxxx" autocomplete="off"></div>
+        <div class="field"><label for="form-yt-title-tpl">Template judul live</label>
+          <input class="input mono" id="form-yt-title-tpl" value="{name} - {date} {time} WIB">
+          <div class="help">Token: {name} {date} {time} {datetime}</div></div>
+        <div class="field"><label for="form-yt-playlist">Playlist kamera</label>
+          <input class="input mono" id="form-yt-playlist" placeholder="Kosongkan bila ikut global">
+          <div class="help">ID playlist, awalan PL</div></div>
+        <div class="field full"><label for="form-live-url">URL publik YouTube Live</label>
+          <input class="input mono" id="form-live-url" placeholder="Kosongkan bila belum ada"></div>
+        <div class="field"><label for="form-retention">Retensi (hari)</label>
+          <input class="input num" id="form-retention" type="number" inputmode="numeric" min="1" max="90" value="7"></div>
+        <div class="field"><label for="form-autostart">Auto-start saat boot</label>
+          <label class="check"><input type="checkbox" id="form-autostart"> <span>Jalankan otomatis</span></label></div>
+        <div class="field"><label for="form-enable-yt">Worker live</label>
+          <label class="check"><input type="checkbox" id="form-enable-yt"> <span>Aktifkan YouTube Live</span></label></div>
+        <div class="field"><label for="form-record-hdd">Worker rekam</label>
+          <label class="check"><input type="checkbox" id="form-record-hdd"> <span>Rekam HDD (.mkv)</span></label></div>
+      </div>
+    </form>
+    <div class="dialog-f">
+      <button type="button" class="btn btn-secondary" id="formCancel">Batal</button>
+      <button type="submit" class="btn btn-primary" form="camera-form" id="formSave"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="lbl">Simpan Kamera</span></button>
+    </div>
+  </div>
+</div>
+
+<template id="tpl-monitor">
+  <section class="page">
+    <div class="page-h">
+      <div>
+        <h1>Monitor</h1>
+        <p>Status kamera, perekaman HDD, dan siaran YouTube Live. Keduanya berjalan terpisah.</p>
+      </div>
+      <span class="sp"></span>
+      <span class="count" id="monCount">Belum ada kamera</span>
+      <div class="cols-ctl" id="colsCtl" role="group" aria-label="Kolom grid">
+        <button type="button" data-cols="0" aria-pressed="true" title="Otomatis">Auto</button>
+        <button type="button" data-cols="2" aria-pressed="false">2</button>
+        <button type="button" data-cols="3" aria-pressed="false">3</button>
+        <button type="button" data-cols="4" aria-pressed="false">4</button>
+      </div>
+      <button type="button" class="btn btn-primary" data-act="add"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg><span class="lbl">Tambah Kamera</span></button>
+    </div>
+    <div class="grid" id="grid" aria-busy="true"></div>
+    <div class="panels" id="health"></div>
+  </section>
+</template>
+
+<template id="tpl-rekaman">
+  <section class="page">
+    <div class="page-h">
+      <div>
+        <h1>Rekaman</h1>
+        <p>Segmen .mkv per jam di /mnt/hdd/cctv. Pilih kamera dan tanggal untuk memutar atau mengunduh.</p>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="sel" style="width:260px">
+        <select id="pb-cam" data-chg="pbcam" aria-label="Pilih kamera"></select>
+        <svg class="ico ico-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-act="pbload"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lbl">Muat ulang</span></button>
+      <span class="sp"></span>
+      <span class="count" id="pbCount">0 segmen</span>
+    </div>
+    <div class="chips" id="pb-dates" aria-label="Tanggal rekaman"></div>
+    <div class="pb" style="margin-top:12px">
+      <div class="player">
+        <div class="player-h">
+          <svg class="ico" aria-hidden="true" style="color:var(--fg-3)"><use href="#i-playback"/></svg>
+          <div style="min-width:0">
+            <div class="t" id="pbTitle">Tidak ada file diputar</div>
+            <div class="s" id="pbSub">Pilih segmen pada daftar</div>
+          </div>
+          <span class="sp"></span>
+          <a class="btn btn-secondary btn-sm" id="pbDl" href="#" download hidden><svg class="ico ico-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="lbl">Unduh</span></a>
+        </div>
+        <div class="vwrap"><video id="pbVideo" controls preload="none" playsinline></video></div>
+        <div class="player-f">
+          <span class="lbl2">Kecepatan</span>
+          <div class="seg" role="tablist" aria-label="Kecepatan putar" id="pbSpeed">
+            <button type="button" role="tab" aria-selected="true" data-act="speed" data-id="1">1x</button>
+            <button type="button" role="tab" aria-selected="false" data-act="speed" data-id="2">2x</button>
+            <button type="button" role="tab" aria-selected="false" data-act="speed" data-id="4">4x</button>
+            <button type="button" role="tab" aria-selected="false" data-act="speed" data-id="8">8x</button>
+          </div>
+          <span class="sp"></span>
+          <span class="help">Segmen .mkv diputar langsung dari HDD lewat Range.</span>
+        </div>
+      </div>
+      <div class="tbl" style="max-height:calc(100vh - 300px)">
+        <div class="tbl-h">
+          <label class="check" style="padding:0"><input type="checkbox" id="pbAll" data-chg="pball" aria-label="Pilih semua segmen"></label>
+          <span>Segmen</span><span style="text-align:right">Jam</span><span style="text-align:right">Ukuran</span><span style="width:30px"></span>
+        </div>
+        <div class="tlist" id="pbList"></div>
+        <div class="batch" id="pbBatch" hidden>
+          <svg class="ico ico-sm" aria-hidden="true" style="color:var(--fg-3)"><use href="#i-check"/></svg>
+          <span id="pbSel">0 dipilih</span><span class="sp"></span>
+          <button type="button" class="btn btn-secondary btn-sm" data-act="zip"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="lbl">ZIP</span></button>
+          <button type="button" class="btn btn-danger-ghost btn-sm" data-act="delseg"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-trash"/></svg><span class="lbl">Hapus</span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-log">
+  <section class="page">
+    <div class="page-h">
+      <div>
+        <h1>Log</h1>
+        <p>Keluaran proses rekam dan siaran. Berguna saat ada kegagalan yang tidak terlihat di kartu kamera.</p>
+      </div>
+    </div>
+    <div class="logbar">
+      <div class="seg" role="tablist" aria-label="Kanal log" id="logSeg">
+        <button type="button" role="tab" aria-selected="true" data-act="chan" data-id="camera"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-record"/></svg>Kamera</button>
+        <button type="button" role="tab" aria-selected="false" data-act="chan" data-id="youtube"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-youtube"/></svg>YouTube</button>
+      </div>
+      <div class="sel" style="width:240px">
+        <select id="log-cam" data-chg="logcam" aria-label="Pilih kamera untuk log"></select>
+        <svg class="ico ico-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </div>
+      <input class="input" id="log-filter" data-inp="logfilter" placeholder="filter teks" aria-label="Filter log" style="width:180px">
+      <label class="switch"><input type="checkbox" id="log-scroll" data-chg="autoscroll" role="switch" aria-checked="true" checked><span>Auto-scroll</span></label>
+      <span class="sp"></span>
+      <button type="button" class="btn btn-icon" data-act="copylog" aria-label="Salin log"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg></button>
+      <button type="button" class="btn btn-icon" data-act="reflog" aria-label="Muat ulang log"><svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+    </div>
+    <pre class="logbox" id="logbox" tabindex="0" aria-live="off">Memuat log</pre>
+    <div class="logmeta">
+      <span id="logDesc">Kanal kamera</span>
+      <span style="flex:1"></span>
+      <span id="logAt">—</span>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-pengaturan">
+  <section class="page">
+    <div class="page-h">
+      <div>
+        <h1>Pengaturan</h1>
+        <p>Kredensial YouTube, retensi, dan batas ruang disk. Perubahan berlaku setelah disimpan.</p>
+      </div>
+    </div>
+    <form class="set" id="settings-form" novalidate>
+      <div class="grp">
+        <div class="grp-h"><svg class="ico" aria-hidden="true"><use href="#i-youtube"/></svg><h2>YouTube API</h2></div>
+        <p>Kredensial OAuth dan playlist tujuan arsip siaran.</p>
+        <div class="fields">
+          <div class="field"><label for="set-client-id">Client ID</label>
+            <input class="input mono" id="set-client-id" autocomplete="off" placeholder="xxxxx.apps.googleusercontent.com"></div>
+          <div class="field"><label for="set-client-secret">Client secret</label>
+            <input class="input mono" id="set-client-secret" type="password" autocomplete="off" placeholder="••••••••">
+            <div class="help" id="secretHelp">Tersimpan di server. Isi hanya bila ingin mengganti.</div></div>
+          <div class="field"><label for="set-playlist">Playlist ID</label>
+            <input class="input mono" id="set-playlist" autocomplete="off" placeholder="PLxxxxxxxxxxxxxxxx">
+            <div class="help">Salin dari URL playlist, parameter list.</div></div>
+          <div class="field"><label>Status akun</label>
+            <div class="oauth">
+              <svg class="ico ico-sm" aria-hidden="true" id="oauthIco"><use href="#i-lock"/></svg>
+              <span id="oauthText">Memeriksa token</span>
+              <span class="sp"></span>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="oauth"><span class="lbl">Hubungkan</span></button>
+              <button type="button" class="btn btn-ghost btn-sm" data-act="sync"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lbl">Sinkronkan Playlist</span></button>
+            </div>
+            <div class="code-row">
+              <input class="input mono" id="oauth-code" placeholder="Tempel kode otorisasi Google" autocomplete="off" aria-label="Kode otorisasi Google">
+              <button type="button" class="btn btn-primary" data-act="oauthcode"><span class="lbl">Hubungkan</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-h"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg><h2>Sesi &amp; Rotasi</h2></div>
+        <p>Sesi live berputar otomatis agar arsip YouTube tetap utuh.</p>
+        <div class="fgrid">
+          <div class="field"><label for="set-live-duration">Durasi live (menit)</label>
+            <input class="input num" id="set-live-duration" type="number" inputmode="numeric" min="30" max="720" value="715">
+            <div class="help" id="durHelp">715 menit = 11 jam 55 menit.</div></div>
+          <div class="field"><label for="set-segment">Segmen rekam (detik)</label>
+            <input class="input num" id="set-segment" type="number" inputmode="numeric" min="300" max="7200" value="3600">
+            <div class="help">3600 detik = 1 jam per berkas .mkv.</div></div>
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-h"><svg class="ico" aria-hidden="true"><use href="#i-storage"/></svg><h2>Penyimpanan</h2></div>
+        <p>Batas ruang dan umur rekaman sebelum dihapus otomatis.</p>
+        <div class="fgrid">
+          <div class="field"><label for="set-guard">Disk guard minimal (GB)</label>
+            <input class="input num" id="set-guard" type="number" inputmode="numeric" min="2" max="100" value="10">
+            <div class="help">Di bawah nilai ini folder tertua dihapus.</div></div>
+          <div class="field"><label for="set-retention">Retensi (hari)</label>
+            <input class="input num" id="set-retention" type="number" inputmode="numeric" min="1" max="90" value="7">
+            <div class="help">Rekaman lebih tua dari nilai ini dihapus lebih dulu.</div></div>
+        </div>
+      </div>
+
+      <div class="savebar">
+        <span class="st" id="saveStatus"></span>
+        <span class="sp"></span>
+        <button type="submit" class="btn btn-primary" id="saveBtn"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg><span class="lbl">Simpan Pengaturan</span></button>
+      </div>
+    </form>
+  </section>
+</template>
+
+<template id="tpl-panduan">
+  <section class="page">
+    <div class="page-h">
+      <div>
+        <h1>Panduan</h1>
+        <p>Cara kerja perekaman, siaran, kuota YouTube API, dan pemeliharaan disk.</p>
+      </div>
+      <span class="sp"></span>
+      <button type="button" class="btn btn-secondary btn-sm" data-act="refload"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lbl">Muat ulang</span></button>
+    </div>
+    <div class="panel"><div class="prose" id="guide">Memuat panduan</div></div>
+  </section>
+</template>
+
+<script>
+'use strict';
+
+/* ── api ─────────────────────────────────────────────────────── */
+const API = '/api';
+const api = {
+  async req(method, url, body) {
+    const opt = { method, headers: {} };
+    if (body !== undefined) {
+      opt.headers['Content-Type'] = 'application/json';
+      opt.body = JSON.stringify(body);
+    }
+    const res = await fetch(url, opt);
+    if (!res.ok) {
+      let msg = res.status + ' ' + res.statusText;
+      try {
+        const t = await res.text();
+        try { const j = JSON.parse(t); if (j && j.error) msg = j.error; else if (t) msg = t; }
+        catch (_) { if (t) msg = t; }
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    const ct = res.headers.get('content-type') || '';
+    return ct.indexOf('json') >= 0 ? res.json() : res.text();
+  },
+  get(u) { return api.req('GET', u); },
+  post(u, b) { return api.req('POST', u, b === undefined ? {} : b); },
+  put(u, b) { return api.req('PUT', u, b); },
+  del(u) { return api.req('DELETE', u); }
+};
+
+/* ── state ───────────────────────────────────────────────────── */
+const state = {
+  page: 'monitor',
+  cameras: [],
+  settings: null,
+  yt: null,
+  stats: null,
+  storage: null,
+  quotaDeadline: 0,
+  loadErr: '',
+  log: { camId: '', channel: 'camera', filter: '', auto: true, data: { camera: '', youtube: '' }, at: 0, busy: false },
+  pb: { camId: '', date: '', segments: [], sel: new Set(), speed: 1 },
+  busy: {},
+  tick: 0
+};
+
+/* ── helpers ─────────────────────────────────────────────────── */
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+function fmtUp(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const j = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), d = sec % 60;
+  if (j > 0) return j + 'j ' + m + 'm';
+  if (m > 0) return m + 'm';
+  return d + 'd';
+}
+function upFrom(since) {
+  if (!since) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (since > now) return '0m';
+  return fmtUp(now - since);
+}
+function fmtSize(mb) {
+  if (!mb || mb < 0) return '0 MB';
+  if (mb >= 1024 * 1024) return (mb / 1024 / 1024).toFixed(1).replace('.', ',') + ' TB';
+  if (mb >= 1024) return (mb / 1024).toFixed(1).replace('.', ',') + ' GB';
+  return mb.toFixed(1).replace('.', ',') + ' MB';
+}
+function fmtGB(gb) {
+  if (!gb && gb !== 0) return '—';
+  return gb.toFixed(1).replace('.', ',') + ' GB';
+}
+function pad(n) { return n < 10 ? '0' + n : String(n); }
+function hhmm(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function hhmmss(d) { return hhmm(d) + ':' + pad(d.getSeconds()); }
+function stampNow() {
+  const d = new Date();
+  return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + hhmmss(d);
+}
+function parseWib(iso) {
+  const t = Date.parse(iso);
+  return isNaN(t) ? null : new Date(t);
+}
+function hostOf(url) {
+  const m = /^[a-z]+:\/\/(?:[^@/]*@)?([^/:?#]+)/i.exec(url || '');
+  return m ? m[1] : (url || '');
+}
+function camById(id) { return state.cameras.find(c => c.id === id) || null; }
+function isQuota() { return !!(state.yt && state.yt.quota_blocked); }
+function quotaLeft() {
+  if (!state.quotaDeadline) return 0;
+  return Math.max(0, Math.round((state.quotaDeadline - Date.now()) / 1000));
+}
+
+/* ── toast ───────────────────────────────────────────────────── */
+function toast(kind, title, body) {
+  const box = $('#toasts');
+  const icons = { ok: 'i-check', err: 'i-alert', warn: 'i-alert', info: 'i-refresh' };
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + kind;
+  el.setAttribute('role', kind === 'err' ? 'alert' : 'status');
+  el.innerHTML = '<svg class="ico ic" aria-hidden="true"><use href="#' + icons[kind] + '"/></svg>' +
+    '<div><b>' + esc(title) + '</b>' + (body ? '<p>' + esc(body) + '</p>' : '') + '</div>' +
+    '<button type="button" class="btn btn-icon x" aria-label="Tutup"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-x"/></svg></button>';
+  box.appendChild(el);
+  while (box.children.length > 3) box.removeChild(box.firstChild);
+  const kill = () => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 140);
+  };
+  el.querySelector('.x').addEventListener('click', kill);
+  setTimeout(kill, kind === 'err' ? 8000 : 5000);
+}
+function say(msg) { $('#liveRegion').textContent = msg; }
+
+/* ── dialog ──────────────────────────────────────────────────── */
+let askResolve = null;
+let askReturn = null;
+function ask(opt) {
+  const scrim = $('#scrimAsk');
+  $('#askT').textContent = opt.title;
+  $('#askD').innerHTML = opt.body;
+  $('#askOk').innerHTML = (opt.danger === false ? '' : '<svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>') +
+    '<span class="lbl">' + esc(opt.confirm) + '</span>';
+  $('#askOk').className = 'btn ' + (opt.danger === false ? 'btn-primary' : 'btn-danger');
+  $('#askCancel').textContent = opt.cancel;
+  $('#askIco').firstElementChild.setAttribute('href', opt.danger === false ? '#i-alert' : '#i-trash');
+  $('#askIco').style.color = opt.danger === false ? 'var(--amber-fg)' : '';
+  askReturn = document.activeElement;
+  scrim.hidden = false;
+  $('#askCancel').focus();
+  return new Promise(res => { askResolve = res; });
+}
+function closeAsk(v) {
+  $('#scrimAsk').hidden = true;
+  const r = askResolve;
+  askResolve = null;
+  if (askReturn && askReturn.focus) askReturn.focus();
+  if (r) r(v);
+}
+
+/* ── menu ────────────────────────────────────────────────────── */
+function openMenu(trigger, items) {
+  const menu = $('#menu');
+  menu.innerHTML = items.map(it => {
+    if (it.sep) return '<hr>';
+    return '<button type="button" role="menuitem" class="' + (it.danger ? 'danger' : '') +
+      '" data-menu="' + esc(it.act) + '" data-id="' + esc(it.id || '') + '">' +
+      '<svg class="ico ico-sm" aria-hidden="true"><use href="#' + it.icon + '"/></svg>' + esc(it.label) + '</button>';
+  }).join('');
+  menu.hidden = false;
+  const r = trigger.getBoundingClientRect();
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let left = Math.min(r.right - mw, window.innerWidth - mw - 8);
+  let top = r.bottom + 4;
+  if (window.innerHeight - r.bottom < mh + 12) top = Math.max(8, r.top - mh - 4);
+  menu.style.left = Math.max(8, left) + 'px';
+  menu.style.top = top + 'px';
+  trigger.setAttribute('aria-expanded', 'true');
+  const first = menu.querySelector('button');
+  if (first) first.focus();
+  menu._trigger = trigger;
+}
+function closeMenu() {
+  const menu = $('#menu');
+  if (menu.hidden) return;
+  const tr = menu._trigger;
+  menu.hidden = true;
+  if (tr) {
+    tr.setAttribute('aria-expanded', 'false');
+    if (document.contains(tr)) tr.focus();
+  }
+}
+
+/* ── router ──────────────────────────────────────────────────── */
+const PAGES = {
+  monitor: { tpl: 'tpl-monitor', title: 'Monitor' },
+  rekaman: { tpl: 'tpl-rekaman', title: 'Rekaman' },
+  log: { tpl: 'tpl-log', title: 'Log' },
+  pengaturan: { tpl: 'tpl-pengaturan', title: 'Pengaturan' },
+  panduan: { tpl: 'tpl-panduan', title: 'Panduan' }
+};
+function route() {
+  const h = (location.hash || '#monitor').replace('#', '');
+  go(PAGES[h] ? h : 'monitor');
+}
+function go(page) {
+  state.page = page;
+  if (location.hash !== '#' + page) location.hash = '#' + page;
+  $$('.nav-item').forEach(a => {
+    if (a.dataset.nav === page) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+  // topbar hanya menampilkan status sistem + jam; judul halaman ada di <h1>.
+  document.title = PAGES[page].title + ' — Alphared NVR';
+  const main = $('#main');
+  main.innerHTML = '';
+  const tpl = document.getElementById(PAGES[page].tpl);
+  main.appendChild(tpl.content.cloneNode(true));
+  main.scrollTop = 0;
+  closeMenu();
+  if (page === 'monitor') {
+    renderCameras();
+    renderHealth();
+  } else if (page === 'rekaman') {
+    populatePlaybackCameraDropdown();
+  } else if (page === 'log') {
+    setupTabLogs();
+  } else if (page === 'pengaturan') {
+    loadGlobalSettings();
+  } else if (page === 'panduan') {
+    loadGuideContent();
+  }
+}
+
+/* ── monitor: render ─────────────────────────────────────────── */
+function skeletonGrid() {
+  const grid = $('#grid');
+  if (!grid) return;
+  grid.setAttribute('aria-busy', 'true');
+  grid.innerHTML = Array.from({ length: 3 }).map(() =>
+    '<article class="card" aria-hidden="true"><div class="sk sk-media"></div><div class="card-body">' +
+    '<div class="sk sk-title" style="margin-bottom:8px"></div><div class="sk sk-line" style="width:70%;height:10px"></div>' +
+    '<div class="card-actions"><div class="sk" style="height:26px;border-radius:6px"></div>' +
+    '<div class="sk" style="height:26px;border-radius:6px"></div></div></div></article>').join('');
+}
+
+function camBadges(cam, offline, quota, recErr, liveErr) {
+  let out = '';
+  if (cam.record_status === 'RECORDING') {
+    out += '<span class="badge badge-rec" title="Menulis segmen .mkv ke HDD"><i class="dot dot-rec"></i>REC</span>';
+  } else if (recErr) {
+    out += '<span class="badge badge-warn" title="Proses berhenti karena kesalahan. Lihat log untuk penyebabnya.">ERR</span>';
+  }
+  if (cam.stream_status === 'STREAMING') {
+    out += '<span class="badge badge-live" title="Mengirim RTMP ke YouTube"><i class="dot"></i>LIVE</span>';
+  } else if (offline) {
+    out += '<span class="badge badge-offline" title="Kamera tidak terjangkau. Siaran dihentikan, perekaman menunggu.">OFFLINE</span>';
+  } else if (liveErr) {
+    out += '<span class="badge badge-warn" title="Proses berhenti karena kesalahan. Lihat log untuk penyebabnya.">ERR</span>';
+  }
+  if (quota) {
+    out += '<span class="badge badge-warn" title="Kuota YouTube API habis. Siaran dihentikan sampai kuota direset.">' +
+      '<svg class="ico ico-xs" aria-hidden="true"><use href="#i-alert"/></svg>KUOTA</span>';
+  }
+  if (!out) out = '<span class="badge badge-neutral" title="Dihentikan manual. Tidak ada proses berjalan.">STOP</span>';
+  return out;
+}
+
+
+/* ── live preview: passthrough H.264 lewat MSE ──────────────────────────────
+   STB tidak men-decode apa pun (-c:v copy). Byte fMP4 di-feed apa adanya ke
+   SourceBuffer; MSE sendiri yang menangani kotak yang terpotong antar-chunk.
+   Terukur 3.9% CPU di STB vs 283% untuk MJPEG 25fps.
+   Kalau MSE tidak ada, tombol disembunyikan dan snapshot tetap berjalan. */
+const liveState = new Map();
+
+const MSE_CODECS = [
+  'video/mp4; codecs="avc1.640028"',
+  'video/mp4; codecs="avc1.4D401F"',
+  'video/mp4; codecs="avc1.42E01E"'
+];
+
+function mseCodec() {
+  if (typeof window.MediaSource === 'undefined') return null;
+  for (const c of MSE_CODECS) if (MediaSource.isTypeSupported(c)) return c;
+  return null;
+}
+
+function liveBtn(id) {
+  return document.querySelector('[data-act="livetoggle"][data-id="' + id + '"]');
+}
+
+function stopLive(id) {
+  const media = document.querySelector('[data-card="' + id + '"] .card-media');
+  if (media && document.fullscreenElement === media) {
+    try { document.exitFullscreen(); } catch (e) {}
+  }
+  const st = liveState.get(id);
+  if (st) {
+    st.running = false;
+    try { st.abort.abort(); } catch (e) {}
+    if (st.buf && st.src && st.src.readyState === 'open') {
+      try { st.src.removeSourceBuffer(st.buf); } catch (e) {}
+    }
+    if (st.src && st.src.readyState === 'open') { try { st.src.endOfStream(); } catch (e) {} }
+    if (st.url) { try { URL.revokeObjectURL(st.url); } catch (e) {} }
+    liveState.delete(id);
+  }
+  const v = document.getElementById('live-' + id);
+  if (v) { try { v.pause(); } catch (e) {} v.removeAttribute('src'); v.hidden = true; try { v.load(); } catch (e) {} }
+  const img = document.getElementById('snap-' + id);
+  if (img) img.hidden = false;
+  const stmp = document.querySelector('[data-stamp="' + id + '"]');
+  if (stmp) stmp.hidden = true === false ? true : false;
+  if (stmp) stmp.hidden = false;
+  const btn = liveBtn(id);
+  if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.textContent = 'Live'; btn.disabled = false; }
+}
+
+async function startLive(id, btn) {
+  const v = document.getElementById('live-' + id);
+  const codec = mseCodec();
+  if (!v) return;
+  if (!codec) {
+    toast('warn', 'Video langsung tidak didukung', 'Browser ini tidak punya Media Source Extensions. Snapshot tetap berjalan.');
+    btn.hidden = true;
+    return;
+  }
+
+  // Batas keras: tiap live ~46 MB RAM di STB. Empat sudah ~184 MB.
+  if (liveCount() >= LIVE_MAX) {
+    toast('warn', 'Batas live preview tercapai', 'Maksimal ' + LIVE_MAX + ' stream bersamaan. Hentikan salah satu dulu.');
+    return;
+  }
+
+  btn.setAttribute('aria-pressed', 'true');
+  btn.textContent = 'Memuat';
+  btn.disabled = true;
+
+  const src = new MediaSource();
+  const url = URL.createObjectURL(src);
+  const st = { running: true, src: src, buf: null, url: url, abort: new AbortController(), seeked: false };
+  liveState.set(id, st);
+
+  v.hidden = false;
+  const img = document.getElementById('snap-' + id);
+  if (img) img.hidden = true;
+  const stmp = document.querySelector('[data-stamp="' + id + '"]');
+  if (stmp) stmp.hidden = true;
+  v.src = url;
+
+  await new Promise(res => src.addEventListener('sourceopen', res, { once: true }));
+  if (!st.running) return;
+
+  let buf;
+  try {
+    buf = src.addSourceBuffer(codec);
+  } catch (e) {
+    stopLive(id);
+    toast('err', 'Codec tidak didukung', 'Browser ini tidak bisa memutar H.264 dari kamera.');
+    return;
+  }
+  st.buf = buf;
+  buf.mode = 'segments';
+
+  // Antrian append: SourceBuffer hanya boleh satu operasi sekaligus.
+  // Chunk diteruskan apa adanya — MSE menangani kotak yang terpotong.
+  const queue = [];
+  let busy = false;
+
+  const pump = () => {
+    if (!st.running || busy || !queue.length || buf.updating) return;
+    busy = true;
+    const data = queue.shift();
+    try {
+      buf.appendBuffer(data);
+    } catch (e) {
+      busy = false;
+      // Buffer penuh: buang yang lama lalu coba lagi.
+      if (e && e.name === 'QuotaExceededError') {
+        try {
+          const b = buf.buffered;
+          if (b.length) buf.remove(b.start(0), b.end(b.length - 1) - 10);
+        } catch (e2) {}
+      }
+    }
+  };
+
+  buf.addEventListener('updateend', () => {
+    busy = false;
+    if (!st.running) return;
+    try {
+      const b = buf.buffered;
+      if (b.length) {
+        const edge = b.end(b.length - 1);
+        if (!st.seeked) { v.currentTime = Math.max(0, edge - 0.15); st.seeked = true; }
+        else if (edge - v.currentTime > 6) { v.currentTime = Math.max(0, edge - 0.4); }
+        if (edge - b.start(0) > 24) { buf.remove(b.start(0), edge - 18); }
+      }
+    } catch (e) { /* TimeRanges kosong sesaat setelah remove */ }
+    pump();
+  });
+
+  v.play().catch(() => {});
+  btn.textContent = 'Stop';
+  btn.disabled = false;
+
+  try {
+    const res = await fetch('/api/cameras/' + encodeURIComponent(id) + '/live',
+      { signal: st.abort.signal, cache: 'no-store' });
+    if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+
+    const reader = res.body.getReader();
+    while (st.running) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value && value.length) queue.push(value);
+      pump();
+    }
+  } catch (e) {
+    if (st.running && e && e.name !== 'AbortError') {
+      toast('warn', 'Video langsung terputus', 'Snapshot tetap berjalan. Klik Live untuk mencoba lagi.');
+    }
+    stopLive(id);
+  }
+}
+
+function toggleLive(id, btn) {
+  if (btn.getAttribute('aria-pressed') === 'true') stopLive(id);
+  else startLive(id, btn);
+}
+
+/* ── grid kolom ─────────────────────────────────────────────────────────────
+   auto-fill bikin 2 kamera melar ~700px di layar lebar. Kolom eksplisit +
+   max-width menjaga kartu tetap seukuran wajar. */
+const GRID_PREF_KEY = 'alphared.gridCols';
+const LIVE_MAX = 4;          // batas keras stream bersamaan
+const RAM_GUARD = 78;        // persen; di atas ini live dimatikan paksa
+
+function gridPref() {
+  const v = parseInt(localStorage.getItem(GRID_PREF_KEY) || '0', 10);
+  return isNaN(v) ? 0 : v;
+}
+
+function autoCols(n, w) {
+  if (n <= 1) return 1;
+  if (n === 2) return 2;
+  if (n <= 4) return w >= 1200 ? 3 : 2;
+  return w >= 1600 ? 4 : 3;
+}
+
+function applyGrid() {
+  const grid = $('#grid');
+  if (!grid) return;
+  const n = state.cameras.length;
+  const pref = gridPref();
+  const cols = pref > 0 ? pref : autoCols(n, window.innerWidth);
+  grid.style.setProperty('--cols', cols);
+  grid.dataset.cols = cols;
+  const ctl = $('#colsCtl');
+  if (ctl) {
+    ctl.querySelectorAll('button').forEach(b => {
+      b.setAttribute('aria-pressed', String(parseInt(b.dataset.cols, 10) === pref));
+    });
+    ctl.hidden = n < 2;   // tidak relevan untuk satu kamera
+  }
+  const c = $('#monCount');
+  if (c && n) c.textContent = n + ' kamera · ' + cols + ' kolom';
+}
+
+/* ── RAM guard ──────────────────────────────────────────────────────────────
+   Setiap live = satu ffmpeg ~46 MB. Kalau RAM sistem melewati batas, semua
+   live dimatikan dan user diberi tahu — lebih baik snapshot jalan daripada
+   OOM killer membunuh perekam HDD. */
+let ramGuardTripped = false;
+
+function liveCount() {
+  let n = 0;
+  for (const [id] of liveState) {
+    const v = document.getElementById('live-' + id);
+    if (v && !v.hidden) n++;
+  }
+  return n;
+}
+
+function checkRamGuard() {
+  const s = state.stats;
+  if (!s || typeof s.ram !== 'number') return;
+  if (s.ram >= RAM_GUARD) {
+    if (liveCount() > 0) {
+      const n = liveCount();
+      stopAllLive();
+      toast('warn', 'RAM tinggi — live preview dimatikan',
+        'RAM terpakai ' + s.ram.toFixed(0) + '%. ' + n +
+        ' live dimatikan otomatis agar perekaman HDD tetap aman.');
+    }
+    if (!ramGuardTripped) {
+      ramGuardTripped = true;
+      document.documentElement.classList.add('ram-guard');
+    }
+  } else if (s.ram < RAM_GUARD - 8) {
+    ramGuardTripped = false;
+    document.documentElement.classList.remove('ram-guard');
+  }
+}
+
+function stopAllLive() {
+  for (const id of [...liveState.keys()]) stopLive(id);
+}
+
+/* ── fullscreen ─────────────────────────────────────────────────────────────
+   Yang di-fullscreen adalah .card-media, bukan <video> dipindah. Tidak ada
+   koneksi RTSP baru (kamera cuma izinkan 1 per stream) dan MSE tidak reset. */
+async function toggleFullscreen(id) {
+  const media = document.querySelector('[data-card="' + id + '"] .card-media');
+  if (!media) return;
+
+  if (document.fullscreenElement === media) {
+    try { await document.exitFullscreen(); } catch (e) {}
+    return;
+  }
+
+  // requestFullscreen() HARUS dipanggil sinkron di dalam gesture user.
+  // Kalau didahului await (mis. menyalakan live), browser mencabut izinnya
+  // dan fullscreen diam-diam gagal. Jadi minta fullscreen dulu, baru live.
+  const v = document.getElementById('live-' + id);
+  const needLive = v && v.hidden;
+  const btn = needLive ? liveBtn(id) : null;
+
+  let fsPromise;
+  try {
+    fsPromise = media.requestFullscreen();
+  } catch (e) {
+    toast('warn', 'Layar penuh ditolak', 'Browser tidak mengizinkan elemen ini masuk layar penuh.');
+    return;
+  }
+
+  if (needLive && btn) startLive(id, btn);
+
+  try {
+    await fsPromise;
+  } catch (e) {
+    toast('warn', 'Layar penuh gagal', 'Browser menolak permintaan layar penuh.');
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const fs = document.fullscreenElement;
+  document.querySelectorAll('.card-media .fs-btn use').forEach(u => {
+    u.setAttribute('href', fs ? '#i-collapse' : '#i-expand');
+  });
+  if (!fs) return;
+  // segarkan meta di bar kontrol
+  const id = fs.closest('[data-card]')?.dataset.card;
+  if (id) updateFsMeta(id);
+});
+
+function updateFsMeta(id) {
+  const el = document.querySelector('[data-fsmeta="' + id + '"]');
+  if (!el) return;
+  const cam = state.cameras.find(c => c.id === id);
+  const v = document.getElementById('live-' + id);
+  const bits = [];
+  if (v && v.videoWidth) bits.push(v.videoWidth + '×' + v.videoHeight);
+  if (v && !v.hidden) bits.push('25 fps');
+  if (cam && cam.record_status === 'RECORDING') bits.push('REC');
+  el.textContent = bits.join(' · ');
+}
+
+function camCard(cam) {
+  const rec = cam.record_status === 'RECORDING';
+  const live = cam.stream_status === 'STREAMING';
+  const recErr = cam.record_status === 'ERROR';
+  const liveErr = cam.stream_status === 'ERROR';
+  const quota = isQuota() && cam.enable_youtube && !live;
+  // stream_status OFFLINE dipakai backend untuk dua kondisi berbeda: kamera
+  // benar-benar tidak terjangkau, atau siaran dijeda karena kuota API habis
+  // (kamera sehat, rekam tetap jalan). Bedakan dari error_msg, bukan dari status.
+  const offline = cam.stream_status === 'OFFLINE' && !/kuota/i.test(cam.error_msg || '');
+  const cls = ['card'];
+  if (rec) cls.push('card--rec');
+  if (live) cls.push('card--live');
+  if (offline) cls.push('card--offline');
+  if (recErr || liveErr) cls.push('card--err');
+
+  const name = esc(cam.name);
+  const sub = esc(hostOf(cam.rtsp_url)) + ' · ' + esc(cam.enable_youtube ? 'YouTube' : 'lokal') +
+    ' · ' + esc((cam.retention_days || 7) + 'h retensi');
+
+  const media = offline
+    ? '<div class="media-center"><svg class="ico" style="width:20px;height:20px" aria-hidden="true"><use href="#i-wifi-off"/></svg><span>Offline</span></div>'
+    : '<img class="snap-img" id="snap-' + esc(cam.id) + '" data-snap="' + esc(cam.id) + '" src="/api/cameras/' +
+      encodeURIComponent(cam.id) + '/preview?t=' + Date.now() + '" alt="Snapshot kamera ' + name + '" loading="lazy" decoding="async">' +
+      '<video class="live-vid" id="live-' + esc(cam.id) + '" muted playsinline hidden></video>' +
+      '<div class="stamp" data-stamp="' + esc(cam.id) + '">' + stampNow() + '</div>' +
+      '<button type="button" class="btn live-btn" data-act="livetoggle" data-id="' + esc(cam.id) +
+      '" aria-pressed="false" title="Putar video langsung 25 fps">Live</button>' +
+      '<button type="button" class="btn fs-btn" data-act="fullscreen" data-id="' + esc(cam.id) +
+      '" aria-label="Layar penuh" title="Layar penuh"><svg class="ico ico-sm" aria-hidden="true">' +
+      '<use href="#i-expand"/></svg></button>' +
+      '<div class="fs-bar"><span class="fs-name">' + name + '</span>' +
+      '<span class="fs-meta" data-fsmeta="' + esc(cam.id) + '"></span><span class="sp"></span>' +
+      '<button type="button" class="btn btn-secondary btn-sm" data-act="fullscreen" data-id="' + esc(cam.id) + '">' +
+      '<svg class="ico ico-sm" aria-hidden="true"><use href="#i-collapse"/></svg><span class="lbl">Keluar</span></button></div>';
+
+  const recUp = rec ? upFrom(cam.record_started_at) : null;
+  const liveUp = live ? upFrom(cam.stream_started_at) : null;
+
+  let notice = '';
+  if (quota) {
+    const left = quotaLeft();
+    const resetTxt = left > 0 ? ' sekitar ' + hhmm(quotaDeadlineDate()) + ' WIB' : '';
+    notice += '<div class="notice"><svg class="ico ico-sm" aria-hidden="true" style="margin-top:1px"><use href="#i-alert"/></svg>' +
+      '<span>Kuota API habis — live dijeda' + esc(resetTxt) + '.</span></div>';
+  }
+  if (cam.error_msg && (offline || liveErr || recErr)) {
+    notice += '<div class="notice notice-err"><svg class="ico ico-sm" aria-hidden="true" style="margin-top:1px"><use href="#i-alert"/></svg>' +
+      '<span>' + esc(cam.error_msg) + '</span></div>';
+  }
+
+  const recDisabled = !cam.record_hdd;
+  const recTitle = !cam.record_hdd ? 'Rekam HDD tidak aktif untuk kamera ini'
+    : offline ? 'Kamera terdeteksi offline. Klik untuk mencoba sambung ulang.' : '';
+  const liveDisabled = live ? false : (quota || !cam.enable_youtube || !cam.stream_key);
+  const liveTitle = quota ? 'Kuota YouTube API habis. Siaran tidak bisa dimulai sekarang.'
+    : !cam.enable_youtube ? 'Live YouTube tidak aktif untuk kamera ini.'
+    : !cam.stream_key ? 'Stream key belum diisi di Pengaturan kamera.'
+    : offline ? 'Kamera terdeteksi offline. Klik untuk mencoba mulai siaran.'
+    : '';
+
+  const recBtn = rec
+    ? '<button type="button" class="btn btn-danger-ghost btn-sm" data-act="recstop" data-id="' + esc(cam.id) + '">' +
+      '<svg class="ico ico-sm" aria-hidden="true"><use href="#i-stop"/></svg><span class="lbl">Stop Rekam</span></button>'
+    : '<button type="button" class="btn btn-secondary btn-sm" data-act="recstart" data-id="' + esc(cam.id) + '"' +
+      (recDisabled ? ' disabled' : '') + (recTitle ? ' title="' + esc(recTitle) + '"' : '') + '>' +
+      '<svg class="ico ico-sm" aria-hidden="true"><use href="#i-record"/></svg><span class="lbl">' +
+      (recErr ? 'Coba Rekam Lagi' : 'Mulai Rekam') + '</span></button>';
+
+  const liveBtn = live
+    ? '<button type="button" class="btn btn-danger-ghost btn-sm" data-act="livestop" data-id="' + esc(cam.id) + '">' +
+      '<svg class="ico ico-sm" aria-hidden="true"><use href="#i-stop"/></svg><span class="lbl">Stop Live</span></button>'
+    : '<button type="button" class="btn btn-secondary btn-sm" data-act="livestart" data-id="' + esc(cam.id) + '"' +
+      (liveDisabled ? ' disabled' : '') + (liveTitle ? ' title="' + esc(liveTitle) + '"' : '') + '>' +
+      '<svg class="ico ico-sm" aria-hidden="true"><use href="#i-broadcast"/></svg><span class="lbl">' +
+      (liveErr ? 'Coba Live Lagi' : 'Mulai Live') + '</span></button>';
+
+  return '<article class="' + cls.join(' ') + '" data-card="' + esc(cam.id) + '">' +
+    '<div class="card-media">' + media +
+    '<div class="badges">' + camBadges(cam, offline, quota, recErr, liveErr) + '</div>' +
+    '<button type="button" class="btn btn-icon more" data-act="menu" data-id="' + esc(cam.id) +
+      '" aria-label="Menu kamera" aria-haspopup="menu" aria-expanded="false">' +
+      '<svg class="ico" aria-hidden="true"><use href="#i-more"/></svg></button>' +
+    '</div>' +
+    '<div class="card-body">' +
+    '<div class="card-head"><div style="min-width:0"><div class="card-name" title="' + name + '">' + name + '</div>' +
+    '<div class="card-sub" title="' + esc(cam.rtsp_url) + '">' + sub + '</div></div></div>' +
+    '<dl class="card-stats">' +
+    '<div class="stat"><dt>Rekam</dt><dd class="num" data-since="' + (rec ? cam.record_started_at : 0) + '" data-none="—">' +
+      (recUp || '—') + '</dd></div>' +
+    '<div class="stat"><dt>Live</dt><dd class="num" data-since="' + (live ? cam.stream_started_at : 0) + '" data-none="—">' +
+      (liveUp || '—') + '</dd></div>' +
+    '<div class="stat"><dt>Retensi</dt><dd class="num">' + esc((cam.retention_days || 7) + ' hari') + '</dd></div>' +
+    '</dl>' + notice +
+    '<div class="card-actions">' + recBtn + liveBtn + '</div>' +
+    '</div></article>';
+}
+
+function renderCameras() {
+  const grid = $('#grid');
+  if (!grid) return;
+  grid.removeAttribute('aria-busy');
+  const list = state.cameras;
+  $('#monCount').textContent = list.length ? list.length + ' kamera' : 'Belum ada kamera';
+  if (state.loadErr) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><svg class="ico" style="width:20px;height:20px" aria-hidden="true">' +
+      '<use href="#i-alert"/></svg><b>Server tidak merespons</b><p>Dashboard kehilangan koneksi ke server. Data yang tampil mungkin sudah tidak berlaku.</p>' +
+      '<button type="button" class="btn btn-secondary btn-sm" data-act="reload"><svg class="ico ico-sm" aria-hidden="true">' +
+      '<use href="#i-refresh"/></svg><span class="lbl">Coba lagi</span></button></div>';
+    return;
+  }
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">' +
+      '<svg class="ico" style="width:20px;height:20px" aria-hidden="true"><use href="#i-camera"/></svg>' +
+      '<b>Belum ada kamera</b><p>Tambahkan kamera untuk mulai merekam ke HDD dan menyiarkan ke YouTube.</p>' +
+      '<button type="button" class="btn btn-secondary btn-sm" data-act="add"><svg class="ico ico-sm" aria-hidden="true">' +
+      '<use href="#i-plus"/></svg><span class="lbl">Tambah Kamera</span></button></div>';
+    return;
+  }
+  // Jangan hancurkan <video> yang sedang streaming: render ulang grid akan
+  // mematikan MSE dan memutus feed. Lewati render selama ada live aktif;
+  // badge/uptime tetap diperbarui lewat updateUptimes().
+  const liveOn = [...liveState.keys()].some(k => {
+    const v = document.getElementById('live-' + k);
+    return v && !v.hidden;
+  });
+  // Saat fullscreen, elemen media sedang dipakai browser — render ulang akan
+  // mematikan stream dan melepas fullscreen.
+  if (liveOn || document.fullscreenElement) { updateCardBadges(); applyGrid(); return; }
+  // Render ulang hanya kalau data kamera benar-benar berubah. Sebelumnya grid
+  // dibangun ulang tiap 5 detik, sehingga <img> snapshot yang sedang dimuat
+  // dibuang dan diganti elemen baru — request lama dibatalkan, gambar tidak
+  // pernah selesai. Lewat tunnel satu snapshot butuh 4-9 detik, jadi kartu
+  // tampak kosong selamanya. Tanda tangan ini murah dan cukup.
+  const sig = list.map(c => [c.id, c.name, c.stream_status, c.record_status,
+    c.error_msg || '', c.enable_youtube ? 1 : 0, c.retention_days || 0].join('|')).join(';');
+  if (sig === state.gridSig) { updateCardBadges(); applyGrid(); return; }
+  state.gridSig = sig;
+  grid.innerHTML = list.map(camCard).join('');
+  applyGrid();
+}
+
+// Perbarui badge + tombol tanpa menyentuh elemen <video>.
+function tickFsMeta() {
+  const fs = document.fullscreenElement;
+  if (!fs) return;
+  const id = fs.closest('[data-card]')?.dataset.card;
+  if (id) updateFsMeta(id);
+}
+
+function updateCardBadges() {
+  for (const cam of state.cameras) {
+    const card = document.querySelector('[data-card="' + cam.id + '"]');
+    if (!card) continue;
+    const rec = cam.record_status === 'RECORDING';
+    card.classList.toggle('card--rec', rec);
+    const b = card.querySelector('.badges');
+    if (b) {
+      const quota = isQuota() && cam.enable_youtube && cam.stream_status !== 'STREAMING';
+      const offline = cam.stream_status === 'OFFLINE' && !/kuota/i.test(cam.error_msg || '');
+      b.innerHTML = camBadges(cam, offline, quota, cam.record_status === 'ERROR',
+        cam.stream_status === 'ERROR');
+    }
+  }
+}
+
+function renderHealth() {
+  const box = $('#health');
+  if (!box) return;
+  const s = state.stats;
+  const yt = state.yt;
+  const st = state.storage;
+
+  /* broadcast */
+  let bc = '';
+  if (!yt) {
+    bc = '<div class="kv"><span>Memuat status broadcast</span><b>—</b></div>';
+  } else {
+    const conn = yt.connected;
+    bc += '<div class="kv"><span>Akun YouTube</span><b class="' + (conn ? 'ok' : 'crit') + '">' +
+      (conn ? 'Terhubung' : 'Belum terhubung') + '</b></div>';
+    bc += '<div class="kv"><span>Playlist</span><b>' + esc(yt.playlist_id || '—') + '</b></div>';
+    if (yt.quota_blocked) {
+      const left = quotaLeft();
+      bc += '<div class="kv"><span>Kuota API</span><b class="warn">Habis</b></div>';
+      bc += '<div class="kv"><span>Reset</span><b>' + esc(left > 0 ? fmtUp(left) + ' lagi' : 'menunggu') + '</b></div>';
+    } else {
+      bc += '<div class="kv"><span>Kuota API</span><b class="ok">Tersedia</b></div>';
+    }
+    const g = (yt.broadcast_guard || []).filter(x => x.active);
+    bc += '<div class="kv"><span>Broadcast guard</span><b class="' + (g.length ? 'warn' : 'ok') + '">' +
+      (g.length ? g.length + ' aktif' : 'nonaktif') + '</b></div>';
+    bc += '<div class="kv"><span>Kredensial</span><b>' + (yt.has_credentials ? 'lengkap' : 'belum lengkap') + '</b></div>';
+  }
+
+  /* storage */
+  let sd = '';
+  if (!s) sd = '<div class="kv"><span>Membaca disk</span><b>—</b></div>';
+  else {
+    const pct = s.disk_percent || 0;
+    const cls = pct >= 90 ? 'crit' : pct >= 75 ? 'warn' : '';
+    sd += '<div class="panel-big num">' + esc(fmtGB(s.disk_used_gb)) +
+      ' <small>/ ' + esc(fmtGB(s.disk_total_gb)) + '</small></div>' +
+      '<div class="meter"><i class="' + cls + '" style="width:' + Math.min(100, pct) + '%"></i></div>';
+    sd += '<div class="kv"><span>Tersedia</span><b class="' + (pct >= 90 ? 'crit' : '') + '">' + esc(fmtGB(s.disk_free_gb)) + '</b></div>';
+    sd += '<div class="kv"><span>Terpakai</span><b>' + esc(pct.toFixed(0)) + '%</b></div>';
+    if (st) {
+      sd += '<div class="kv"><span>Hari terekam</span><b>' + esc(st.days_recorded || 0) + ' hari</b></div>';
+      sd += '<div class="kv"><span>Total arsip</span><b>' + esc(fmtSize(st.total_mb || 0)) + '</b></div>';
+      sd += '<div class="kv"><span>Hari ini</span><b>' + esc((st.today_segments || 0) + ' segmen') + '</b></div>';
+      const rate = st.days_recorded > 0 ? (st.total_mb / st.days_recorded) : 0;
+      if (rate > 0 && s.disk_free_gb > 0) {
+        const days = Math.floor((s.disk_free_gb * 1024) / rate);
+        sd += '<div class="kv"><span>Perkiraan penuh</span><b>' + esc(days + ' hari lagi') + '</b></div>';
+      }
+    }
+  }
+
+  /* server */
+  let sv = '';
+  if (!s) sv = '<div class="kv"><span>Membaca beban host</span><b>—</b></div>';
+  else {
+    const cpu = s.cpu || 0, ram = s.ram || 0;
+    sv += '<div class="panel-big num">' + esc(cpu.toFixed(0)) + '<small>% CPU</small></div>' +
+      '<div class="meter"><i class="' + (cpu >= 90 ? 'crit' : cpu >= 70 ? 'warn' : '') + '" style="width:' +
+      Math.min(100, cpu) + '%"></i></div>';
+    sv += '<div class="kv"><span>RAM</span><b>' + esc(ram.toFixed(0)) + '% · ' +
+      esc(Math.round((s.memory_used || 0) / 1048576)) + ' / ' + esc(Math.round((s.memory_total || 0) / 1048576)) + ' MB</b></div>';
+    sv += '<div class="kv"><span>Stream aktif</span><b>' + esc(s.active_streams || 0) + ' dari ' +
+      esc(state.cameras.length) + '</b></div>';
+    const recs = state.cameras.filter(c => c.record_status === 'RECORDING').length;
+    sv += '<div class="kv"><span>Worker rekam</span><b>' + esc(recs) + ' berjalan</b></div>';
+  }
+
+  box.innerHTML =
+    '<div class="panel"><div class="panel-h"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-youtube"/></svg>' +
+    '<span>Status siaran</span><span class="sp"></span></div>' + bc + '</div>' +
+    '<div class="panel"><div class="panel-h"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-storage"/></svg>' +
+    '<span>Penyimpanan</span></div>' + sd + '</div>' +
+    '<div class="panel"><div class="panel-h"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-cpu"/></svg>' +
+    '<span>Server</span></div>' + sv + '</div>';
+}
+
+/* ── data loads ──────────────────────────────────────────────── */
+async function loadCameras(silent) {
+  try {
+    const list = await api.get(API + '/cameras');
+    state.cameras = Array.isArray(list) ? list : [];
+    state.loadErr = '';
+  } catch (e) {
+    state.loadErr = e.message;
+    if (!silent) toast('err', 'Kamera gagal dimuat', e.message);
+  }
+  if (state.page === 'monitor') {
+    renderCameras();
+    renderHealth();
+  }
+  updateStatusPill();
+}
+
+async function fetchSystemStats() {
+  try {
+    state.stats = await api.get(API + '/system/stats');
+  } catch (_) { return; }
+  const s = state.stats;
+  const set = (id, txt) => { const el = $('#' + id); if (el) el.textContent = txt; };
+  set('railCpu', (s.cpu || 0).toFixed(0) + '%');
+  set('railRam', (s.ram || 0).toFixed(0) + '%');
+  set('railDisk', (s.disk_percent || 0).toFixed(0) + '%');
+  const bar = (id, pct) => {
+    const el = $('#' + id);
+    if (!el) return;
+    el.style.width = Math.min(100, pct || 0) + '%';
+    el.className = pct >= 90 ? 'crit' : pct >= 75 ? 'warn' : '';
+  };
+  bar('railCpuBar', s.cpu);
+  bar('railRamBar', s.ram);
+  bar('railDiskBar', s.disk_percent);
+  checkRamGuard();
+  if (state.page === 'monitor') renderHealth();
+}
+
+async function loadYouTubeStatus() {
+  try {
+    state.yt = await api.get(API + '/system/youtube-status');
+    if (state.yt && state.yt.quota_blocked && state.yt.quota_reset_in > 0) {
+      state.quotaDeadline = Date.now() + state.yt.quota_reset_in * 1000;
+    } else if (!state.yt || !state.yt.quota_blocked) {
+      state.quotaDeadline = 0;
+    }
+  } catch (_) { state.yt = null; }
+  updateStatusPill();
+  if (state.page === 'monitor') {
+    renderCameras();
+    renderHealth();
+  }
+}
+function quotaDeadlineDate() {
+  if (state.quotaDeadline) return new Date(state.quotaDeadline);
+  if (state.yt && state.yt.quota_reset_at) {
+    const d = parseWib(state.yt.quota_reset_at);
+    if (d) return d;
+  }
+  return new Date();
+}
+
+async function loadStorage() {
+  const cam = state.cameras[0];
+  if (!cam) { state.storage = null; return; }
+  try {
+    state.storage = await api.get(API + '/system/storage/' + encodeURIComponent(cam.id));
+  } catch (_) { state.storage = null; }
+  if (state.page === 'monitor') renderHealth();
+}
+
+function updateStatusPill() {
+  const pill = $('#statusPill');
+  if (!pill) return;
+  const anyLive = state.cameras.some(c => c.stream_status === 'STREAMING');
+  const anyRec = state.cameras.some(c => c.record_status === 'RECORDING');
+  if (state.loadErr) {
+    pill.className = 'badge badge-offline';
+    pill.textContent = 'Server tidak merespons';
+  } else if (isQuota()) {
+    pill.className = 'badge badge-warn';
+    pill.textContent = 'Kuota API habis';
+  } else if (anyLive) {
+    pill.className = 'badge badge-live';
+    pill.textContent = 'Live aktif';
+  } else if (anyRec) {
+    pill.className = 'badge badge-rec';
+    pill.textContent = 'Rekam aktif';
+  } else {
+    pill.className = 'badge badge-neutral';
+    pill.textContent = 'Server aktif';
+  }
+}
+
+/* ── camera actions ──────────────────────────────────────────── */
+function busyBtn(btn, on) {
+  if (!btn) return;
+  if (on) {
+    btn.classList.add('is-loading');
+    btn.setAttribute('aria-busy', 'true');
+    btn.disabled = true;
+  } else {
+    btn.classList.remove('is-loading');
+    btn.removeAttribute('aria-busy');
+    btn.disabled = false;
+  }
+}
+
+async function actOn(id, kind, btn) {
+  busyBtn(btn, true);
+  try {
+    await api.post(API + '/cameras/' + encodeURIComponent(id) + '/' + kind);
+    await loadCameras(true);
+    fetchSystemStats();
+    const cam = camById(id);
+    const nm = cam ? cam.name : 'kamera';
+    if (kind === 'record/start') toast('ok', 'Perekaman dimulai', nm + '. Segmen pertama muncul sekitar satu jam lagi.');
+    else if (kind === 'record/stop') toast('ok', 'Perekaman dihentikan', nm + '. Segmen terakhir sudah ditutup.');
+    else if (kind === 'stream/start') toast('ok', 'Siaran dimulai', nm + '. YouTube butuh beberapa detik untuk menandai status live.');
+    else toast('ok', 'Siaran dihentikan', nm + '. Broadcast ditutup.');
+    say('Status ' + nm + ' diperbarui');
+  } catch (e) {
+    busyBtn(btn, false);
+    const cam2 = camById(id);
+    const nm2 = cam2 ? cam2.name : 'kamera';
+    if (kind === 'stream/start') {
+      if (isQuota()) toast('warn', 'Siaran tidak dimulai: kuota habis', nm2 + '. Coba lagi setelah kuota direset.');
+      else if (cam2 && cam2.stream_status === 'OFFLINE') toast('warn', 'Siaran tidak dimulai: kamera offline', nm2 + '.');
+      else toast('err', 'Siaran gagal dimulai', e.message);
+    } else if (kind === 'record/start') toast('err', 'Perekaman gagal dimulai', e.message);
+    else if (kind === 'record/stop') toast('err', 'Perekaman gagal dihentikan', e.message);
+    else toast('err', 'Siaran gagal dihentikan', e.message);
+    loadCameras(true);
+  }
+}
+function startRecord(id, btn) { return actOn(id, 'record/start', btn); }
+function stopRecord(id, btn) { return actOn(id, 'record/stop', btn); }
+function startStream(id, btn) { return actOn(id, 'stream/start', btn); }
+function stopStream(id, btn) { return actOn(id, 'stream/stop', btn); }
+function startCamera(id, btn) { startRecord(id, btn); startStream(id, null); }
+function stopCamera(id, btn) { stopRecord(id, btn); stopStream(id, null); }
+
+async function toggleCameraFeature(id, field, value) {
+  const cam = camById(id);
+  if (!cam) return;
+  const body = Object.assign({}, cam, { [field]: value });
+  try {
+    await api.put(API + '/cameras/' + encodeURIComponent(id), body);
+    await loadCameras(true);
+  } catch (e) {
+    toast('err', 'Konfigurasi gagal diubah', e.message);
+    loadCameras(true);
+  }
+}
+
+async function deleteCamera(id) {
+  const cam = camById(id);
+  if (!cam) return;
+  const ok = await ask({
+    title: 'Hapus kamera ' + cam.name,
+    body: 'Konfigurasi kamera dihapus dari dashboard. Rekaman yang sudah ada di <b>/mnt/hdd/cctv/' + esc(cam.name) +
+      '</b> ikut dihapus permanen dan tidak bisa dipulihkan. Proses rekam dan siaran untuk kamera ini dihentikan lebih dulu.',
+    confirm: 'Hapus permanen',
+    cancel: 'Batal'
+  });
+  if (!ok) return;
+  try {
+    await api.del(API + '/cameras/' + encodeURIComponent(id));
+    toast('ok', 'Kamera ' + cam.name + ' dihapus', null);
+    await loadCameras(true);
+    loadStorage();
+  } catch (e) {
+    toast('err', 'Kamera gagal dihapus', e.message);
+  }
+}
+
+/* ── camera form ─────────────────────────────────────────────── */
+let formReturn = null;
+function openFormModal(isEdit) {
+  $('#formT').textContent = isEdit ? 'Ubah Konfigurasi Kamera' : 'Tambah Kamera';
+  formReturn = document.activeElement;
+  $('#scrimForm').hidden = false;
+  $('#form-name').focus();
+}
+function closeFormModal() {
+  $('#scrimForm').hidden = true;
+  if (formReturn && formReturn.focus) formReturn.focus();
+}
+function editCamera(id) {
+  const cam = camById(id);
+  if (!cam) return;
+  $('#form-camera-id').value = cam.id;
+  $('#form-name').value = cam.name || '';
+  $('#form-rtsp').value = cam.rtsp_url || '';
+  $('#form-rtsp-sub').value = cam.rtsp_sub_url || '';
+  $('#form-rtmp').value = cam.rtmp_url || 'rtmp://a.rtmp.youtube.com/live2';
+  $('#form-key').value = cam.stream_key || '';
+  $('#form-yt-title-tpl').value = cam.youtube_title_template || '{name} - {date} {time} WIB';
+  $('#form-yt-playlist').value = cam.youtube_playlist_id || '';
+  $('#form-live-url').value = cam.live_url || '';
+  $('#form-retention').value = cam.retention_days || 7;
+  $('#form-enable-yt').checked = !!cam.enable_youtube;
+  $('#form-record-hdd').checked = !!cam.record_hdd;
+  $('#form-autostart').checked = !!cam.auto_start;
+  openFormModal(true);
+}
+function resetForm() {
+  $('#camera-form').reset();
+  $('#form-camera-id').value = '';
+  $('#form-rtmp').value = 'rtmp://a.rtmp.youtube.com/live2';
+  $('#form-yt-title-tpl').value = '{name} - {date} {time} WIB';
+  $('#form-yt-playlist').value = '';
+  $('#form-live-url').value = '';
+  $('#form-retention').value = '7';
+  $('#form-enable-yt').checked = true;
+  $('#form-record-hdd').checked = true;
+  $('#form-autostart').checked = false;
+  openFormModal(false);
+}
+async function handleFormSubmit(e) {
+  if (e) e.preventDefault();
+  const id = $('#form-camera-id').value;
+  const name = $('#form-name').value.trim();
+  const rtsp = $('#form-rtsp').value.trim();
+  if (!name) { $('#form-name').focus(); toast('warn', 'Nama kamera belum diisi', 'Isi nama agar mudah dikenali di daftar.'); return; }
+  if (!rtsp) { $('#form-rtsp').focus(); toast('warn', 'RTSP stream utama belum diisi', 'Perekaman tidak bisa berjalan tanpa URL RTSP.'); return; }
+  const payload = {
+    name: name,
+    rtsp_url: rtsp,
+    rtsp_sub_url: $('#form-rtsp-sub').value.trim(),
+    rtmp_url: $('#form-rtmp').value.trim(),
+    stream_key: $('#form-key').value.trim(),
+    youtube_title_template: $('#form-yt-title-tpl').value.trim(),
+    youtube_playlist_id: $('#form-yt-playlist').value.trim(),
+    live_url: $('#form-live-url').value.trim(),
+    retention_days: parseInt($('#form-retention').value, 10) || 7,
+    enable_youtube: $('#form-enable-yt').checked,
+    record_hdd: $('#form-record-hdd').checked,
+    auto_start: $('#form-autostart').checked
+  };
+  const btn = $('#formSave');
+  busyBtn(btn, true);
+  try {
+    if (id) {
+      const cam = camById(id);
+      await api.put(API + '/cameras/' + encodeURIComponent(id), Object.assign({}, cam || {}, payload));
+      toast('ok', 'Konfigurasi kamera disimpan', name);
+    } else {
+      await api.post(API + '/cameras', payload);
+      toast('ok', 'Kamera ' + name + ' ditambahkan', null);
+    }
+    closeFormModal();
+    await loadCameras(true);
+  } catch (e2) {
+    toast('err', id ? 'Kamera gagal diperbarui' : 'Kamera gagal ditambahkan', e2.message);
+  } finally {
+    busyBtn(btn, false);
+  }
+}
+function toggleStreamKeyVisibility() {
+  const inp = $('#form-key');
+  if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+/* ── preview ─────────────────────────────────────────────────── */
+function refreshCamPreview(id) {
+  const img = document.getElementById('snap-' + id);
+  // Jangan menembak ulang selagi request sebelumnya masih jalan. Lewat
+  // Cloudflare Tunnel satu snapshot 1080p butuh 5-8 detik, sedangkan polling
+  // tiap 5 detik: request baru membatalkan yang lama sehingga gambar tidak
+  // pernah selesai termuat dan kartu tampak kosong selamanya.
+  if (img) {
+    if (img.complete === false && img.getAttribute('src')) return;
+    img.src = '/api/cameras/' + encodeURIComponent(id) + '/preview?t=' + Date.now();
+  }
+  const st = document.querySelector('[data-stamp="' + id + '"]');
+  if (st) st.textContent = stampNow();
+}
+function refreshSnapshots() {
+  if (state.page !== 'monitor') return;
+  state.cameras.forEach(c => {
+    if (c.stream_status === 'OFFLINE') return;
+    // Live preview memakai stream2, begitu juga snapshot. C200 hanya
+    // mengizinkan satu koneksi per stream, jadi jangan rebutan: selama live
+    // jalan, snapshot dilewati.
+    if (liveState.has(c.id)) return;
+    refreshCamPreview(c.id);
+  });
+}
+
+/* ── playback ────────────────────────────────────────────────── */
+function populatePlaybackCameraDropdown() {
+  const sel = $('#pb-cam');
+  if (!sel) return;
+  const prev = state.pb.camId || sel.value;
+  sel.innerHTML = '<option value="">Pilih kamera</option>' + state.cameras.map(c =>
+    '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>').join('');
+  if (prev && state.cameras.some(c => c.id === prev)) sel.value = prev;
+  else if (state.cameras.length === 1) { sel.value = state.cameras[0].id; state.pb.camId = sel.value; onPlaybackCameraChange(); }
+  renderPbList();
+}
+async function onPlaybackCameraChange() {
+  const sel = $('#pb-cam');
+  if (!sel) return;
+  state.pb.camId = sel.value;
+  state.pb.date = '';
+  state.pb.segments = [];
+  state.pb.sel.clear();
+  const dates = $('#pb-dates');
+  dates.innerHTML = '';
+  if (!state.pb.camId) { renderPbList(); return; }
+  dates.innerHTML = '<span class="help">Memuat daftar tanggal</span>';
+  try {
+    const data = await api.get(API + '/recordings/dates?id=' + encodeURIComponent(state.pb.camId));
+    const list = (data && data.dates) || [];
+    if (!list.length) {
+      dates.innerHTML = '';
+      renderPbEmpty('never');
+      return;
+    }
+    dates.innerHTML = list.map(d => '<button type="button" class="chip" data-act="pbdate" data-id="' +
+      esc(d) + '" aria-pressed="false">' + esc(d) + '</button>').join('');
+    selectPlaybackDate(list[0]);
+  } catch (e) {
+    dates.innerHTML = '<span class="help help-err">' + esc(e.message) + '</span>';
+  }
+}
+async function selectPlaybackDate(dateStr) {
+  state.pb.date = dateStr;
+  state.pb.sel.clear();
+  $$('#pb-dates .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === dateStr ? 'true' : 'false'));
+  const list = $('#pbList');
+  if (list) list.innerHTML = '<div class="empty" style="margin:8px"><b>Memuat segmen</b><p>Membaca folder tanggal terpilih.</p></div>';
+  try {
+    const data = await api.get(API + '/cameras/' + encodeURIComponent(state.pb.camId) +
+      '/recordings?date=' + encodeURIComponent(dateStr));
+    state.pb.segments = (data && data.segments) || [];
+    renderPbList();
+    if (state.pb.segments.length) {
+      const s0 = state.pb.segments[0];
+      playVideoSegment(s0.url, s0.filename, s0.start_time, s0.end_time, s0.size_mb);
+    }
+  } catch (e) {
+    if (list) list.innerHTML = '<div class="empty" style="margin:8px"><b>Segmen gagal dimuat</b><p>' + esc(e.message) + '</p></div>';
+  }
+}
+function renderPbEmpty(kind) {
+  const list = $('#pbList');
+  if (!list) return;
+  const cnt = $('#pbCount');
+  if (cnt) cnt.textContent = '0 segmen';
+  if (kind === 'never') {
+    list.innerHTML = '<div class="empty" style="margin:8px"><svg class="ico" style="width:20px;height:20px" aria-hidden="true">' +
+      '<use href="#i-playback"/></svg><b>Kamera ini belum pernah merekam</b>' +
+      '<p>Belum ada satu pun segmen .mkv di /mnt/hdd/cctv. Pastikan Rekam HDD aktif dan RTSP terjangkau.</p></div>';
+  } else if (kind === 'none') {
+    list.innerHTML = '<div class="empty" style="margin:8px"><svg class="ico" style="width:20px;height:20px" aria-hidden="true">' +
+      '<use href="#i-calendar"/></svg><b>Tidak ada rekaman pada ' + esc(state.pb.date || 'tanggal ini') + '</b>' +
+      '<p>Kamera tidak menulis segmen pada tanggal ini. Cek log kamera untuk penyebabnya.</p>' +
+      '<button type="button" class="btn btn-secondary btn-sm" data-act="camlog"><svg class="ico ico-sm" aria-hidden="true">' +
+      '<use href="#i-logs"/></svg><span class="lbl">Buka log kamera</span></button></div>';
+  } else {
+    list.innerHTML = '<div class="empty" style="margin:8px"><svg class="ico" style="width:20px;height:20px" aria-hidden="true">' +
+      '<use href="#i-calendar"/></svg><b>Pilih kamera dan tanggal</b>' +
+      '<p>Daftar segmen muncul setelah kamera dan tanggal dipilih.</p></div>';
+  }
+}
+function renderPbList() {
+  const list = $('#pbList');
+  if (!list) return;
+  const segs = state.pb.segments;
+  const cnt = $('#pbCount');
+  if (cnt) cnt.textContent = segs.length + ' segmen';
+  if (!state.pb.camId) { renderPbEmpty('pick'); return; }
+  if (!segs.length) { renderPbEmpty(state.pb.date ? 'none' : 'pick'); return; }
+  list.innerHTML = segs.map((s, i) => {
+    const sel = state.pb.sel.has(s.path);
+    return '<div class="trow' + (sel ? ' is-sel' : '') + '" data-row="' + i + '">' +
+      '<label class="check" style="padding:0"><input type="checkbox" data-chg="seg" data-path="' + esc(s.path) + '"' +
+      (sel ? ' checked' : '') + ' aria-label="Pilih segmen ' + esc(s.filename) + '"></label>' +
+      '<span class="f" data-act="play" data-id="' + esc(s.url) + '" title="' + esc(s.path) + '">' + esc(s.filename) + '</span>' +
+      '<span class="m">' + esc((s.start_time || '').slice(-8) || '—') + '</span>' +
+      '<span class="m">' + esc(fmtSize(s.size_mb)) + '</span>' +
+      '<span class="acts"><a class="btn btn-icon" href="' + esc(s.url) + '&download=1" download aria-label="Unduh ' +
+      esc(s.filename) + '"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-download"/></svg></a></span>' +
+      '</div>';
+  }).join('');
+  updateBatchToolbar();
+}
+function playVideoSegment(url, filename, start, end, sizeMb) {
+  const v = $('#pbVideo');
+  if (!v) return;
+  if (v.getAttribute('src') !== url) {
+    v.src = url;
+    v.load();
+    v.play().catch(() => {});
+  }
+  const t = $('#pbTitle'), s = $('#pbSub'), dl = $('#pbDl');
+  if (t) t.textContent = filename || 'Segmen';
+  if (s) s.textContent = (start || '—') + ' – ' + (end || '—') + ' · ' + fmtSize(sizeMb);
+  if (dl) { dl.href = url + '&download=1'; dl.hidden = false; }
+}
+function setPlaybackSpeed(speed) {
+  state.pb.speed = Number(speed) || 1;
+  const v = $('#pbVideo');
+  if (v) v.playbackRate = state.pb.speed;
+  $$('#pbSpeed button').forEach(b => b.setAttribute('aria-selected', Number(b.dataset.id) === state.pb.speed ? 'true' : 'false'));
+}
+function toggleSegmentSelect(path, checked) {
+  if (checked) state.pb.sel.add(path);
+  else state.pb.sel.delete(path);
+  const all = $('#pbAll');
+  if (all) all.checked = state.pb.segments.length > 0 && state.pb.sel.size === state.pb.segments.length;
+  renderPbSelection();
+}
+function renderPbSelection() {
+  $$('#pbList .trow').forEach((row, i) => {
+    const s = state.pb.segments[i];
+    if (!s) return;
+    row.classList.toggle('is-sel', state.pb.sel.has(s.path));
+  });
+  updateBatchToolbar();
+}
+function toggleSelectAllSegments(checked) {
+  state.pb.sel.clear();
+  if (checked) state.pb.segments.forEach(s => state.pb.sel.add(s.path));
+  $$('#pbList input[data-chg="seg"]').forEach(cb => { cb.checked = !!checked; });
+  renderPbSelection();
+}
+function updateBatchToolbar() {
+  const bar = $('#pbBatch');
+  if (!bar) return;
+  const n = state.pb.sel.size;
+  bar.hidden = n === 0;
+  const label = $('#pbSel');
+  if (label) {
+    let mb = 0;
+    state.pb.segments.forEach(s => { if (state.pb.sel.has(s.path)) mb += (s.size_mb || 0); });
+    label.textContent = n + ' dipilih · ' + fmtSize(mb);
+  }
+}
+async function batchDownloadZip(btn) {
+  const paths = Array.from(state.pb.sel);
+  if (!paths.length) return;
+  let mb = 0;
+  state.pb.segments.forEach(s => { if (state.pb.sel.has(s.path)) mb += (s.size_mb || 0); });
+  toast('info', 'Menyiapkan ZIP', paths.length + ' file (' + fmtSize(mb) + '). Proses berjalan di server.');
+  busyBtn(btn, true);
+  try {
+    const res = await fetch(API + '/recordings/download-zip', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paths })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cctv_' + (state.pb.date || 'batch') + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast('ok', 'ZIP siap', 'Unduhan dimulai.');
+  } catch (e) {
+    toast('err', 'ZIP gagal dibuat', e.message);
+  } finally {
+    busyBtn(btn, false);
+  }
+}
+async function batchDeleteSegments() {
+  const paths = Array.from(state.pb.sel);
+  if (!paths.length) return;
+  let mb = 0;
+  state.pb.segments.forEach(s => { if (state.pb.sel.has(s.path)) mb += (s.size_mb || 0); });
+  const ok = await ask({
+    title: 'Hapus ' + paths.length + ' file rekaman',
+    body: 'File .mkv yang dipilih dihapus permanen dari HDD. Tidak ada salinan, tidak ada tempat sampah, dan file tidak bisa dipulihkan. Total ' + esc(fmtSize(mb)) + '.',
+    confirm: 'Hapus permanen',
+    cancel: 'Batal'
+  });
+  if (!ok) return;
+  try {
+    const r = await api.post(API + '/recordings/delete', { paths });
+    const n = (r && r.deleted_count) || paths.length;
+    toast('ok', n + ' file dihapus permanen', null);
+    state.pb.sel.clear();
+    if (state.pb.date) selectPlaybackDate(state.pb.date);
+    loadStorage();
+  } catch (e) {
+    toast('err', 'Penghapusan gagal', e.message);
+  }
+}
+function goToPlayback(camId) {
+  state.pb.camId = camId || '';
+  go('rekaman');
+  const sel = $('#pb-cam');
+  if (sel && camId) { sel.value = camId; onPlaybackCameraChange(); }
+}
+
+/* ── log ─────────────────────────────────────────────────────── */
+function setupTabLogs() {
+  const sel = $('#log-cam');
+  if (!sel) return;
+  const prev = state.log.camId || sel.value;
+  sel.innerHTML = state.cameras.map(c => '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>').join('');
+  if (!state.cameras.length) {
+    sel.innerHTML = '<option value="">Belum ada kamera</option>';
+    state.log.camId = '';
+    paintLog();
+    return;
+  }
+  if (prev && state.cameras.some(c => c.id === prev)) sel.value = prev;
+  else sel.value = state.cameras[0].id;
+  state.log.camId = sel.value;
+  setChannelUI();
+  refreshTabLogs();
+}
+function onTabLogCamChange() {
+  const sel = $('#log-cam');
+  if (!sel) return;
+  state.log.camId = sel.value;
+  state.log.data = { camera: '', youtube: '' };
+  refreshTabLogs();
+}
+function switchLogChannel(channel) {
+  state.log.channel = channel;
+  setChannelUI();
+  paintLog();
+}
+function setChannelUI() {
+  $$('#logSeg button').forEach(b => b.setAttribute('aria-selected', b.dataset.id === state.log.channel ? 'true' : 'false'));
+  const d = $('#logDesc');
+  if (d) d.textContent = state.log.channel === 'camera' ? 'Kanal kamera · RTSP dan segmen HDD' : 'Kanal YouTube · broadcast dan playlist';
+}
+function startTabLogsPoll() { /* handled by dispatcher */ }
+function stopTabLogsPoll() { /* handled by dispatcher */ }
+async function refreshTabLogs() {
+  if (!state.log.camId) { paintLog(); return; }
+  try {
+    const data = await api.get(API + '/cameras/' + encodeURIComponent(state.log.camId) + '/logs');
+    state.log.data.camera = (data && (data.camera_logs || data.logs)) || '';
+    state.log.data.youtube = (data && data.youtube_logs) || '';
+    state.log.at = Date.now();
+  } catch (e) {
+    state.log.data.camera = 'Error: ' + e.message;
+    state.log.data.youtube = 'Error: ' + e.message;
+    state.log.at = Date.now();
+  }
+  paintLog();
+}
+function paintLog() {
+  const box = $('#logbox');
+  if (!box) return;
+  const raw = state.log.data[state.log.channel] || '';
+  const filter = state.log.filter.trim().toLowerCase();
+  let lines = raw ? String(raw).split('\n') : [];
+  if (filter) lines = lines.filter(l => l.toLowerCase().indexOf(filter) >= 0);
+  const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 24;
+  box.textContent = lines.length ? lines.join('\n')
+    : (state.log.channel === 'camera' ? 'Log kamera kosong. Belum ada keluaran dari proses kamera ini.' : 'Log YouTube kosong. Log terisi saat siaran dimulai.');
+  box.classList.toggle('muted', !lines.length);
+  if (state.log.auto && atBottom) box.scrollTop = box.scrollHeight;
+  const at = $('#logAt');
+  if (at) at.textContent = state.log.at ? 'Diperbarui ' + hhmmss(new Date(state.log.at)) : '—';
+}
+function refreshCurrentLog() { return refreshTabLogs(); }
+function closeLogModal() { /* no modal log: single page channel */ }
+function copyText(text, okMsg) {
+  if (!text) { toast('warn', 'Tidak ada yang bisa disalin', null); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => toast('ok', okMsg || 'Disalin ke clipboard', null),
+      () => toast('err', 'Clipboard tidak bisa diakses', 'Pilih teks log secara manual.')
+    );
+  } else {
+    toast('err', 'Clipboard tidak bisa diakses', 'Pilih teks log secara manual.');
+  }
+}
+function copyTabLogs() {
+  const box = $('#logbox');
+  copyText(box ? box.textContent : '', 'Log disalin ke clipboard');
+}
+function copyLog() { copyTabLogs(); }
+function viewLogs(id) {
+  state.log.camId = id;
+  go('log');
+  const sel = $('#log-cam');
+  if (sel) sel.value = id;
+  refreshTabLogs();
+}
+
+/* ── settings ────────────────────────────────────────────────── */
+async function loadGlobalSettings() {
+  const st = $('#saveStatus');
+  try {
+    const s = await api.get(API + '/settings');
+    state.settings = s;
+    const v = (id, val) => { const el = $('#' + id); if (el) el.value = val; };
+    v('set-client-id', s.youtube_client_id || '');
+    v('set-playlist', s.youtube_playlist_id || '');
+    v('set-live-duration', s.live_duration_minutes || 715);
+    v('set-segment', s.record_segment_seconds || 3600);
+    v('set-guard', s.disk_guard_min_gb || 10);
+    v('set-retention', s.disk_retention_days || 7);
+    const sec = $('#set-client-secret');
+    if (sec) {
+      sec.value = '';
+      sec.placeholder = s.youtube_client_secret ? '••••••••' : 'Belum diisi';
+    }
+    const help = $('#secretHelp');
+    if (help) help.textContent = s.youtube_client_secret
+      ? 'Tersimpan di server. Isi hanya bila ingin mengganti.'
+      : 'Belum ada secret tersimpan.';
+    renderOauthStatus(!!s.youtube_refresh_token);
+    checkDurationWarn();
+    if (st) { st.textContent = ''; st.className = 'st'; }
+  } catch (e) {
+    if (st) { st.textContent = 'Pengaturan gagal dimuat: ' + e.message; st.className = 'st err'; }
+  }
+}
+function renderOauthStatus(connected) {
+  const txt = $('#oauthText'), ico = $('#oauthIco');
+  if (!txt) return;
+  txt.textContent = connected ? 'Terhubung' : 'Belum terhubung';
+  if (ico) ico.firstElementChild.setAttribute('href', connected ? '#i-check' : '#i-lock');
+  if (ico) ico.style.color = connected ? 'var(--green-fg)' : 'var(--fg-3)';
+}
+function checkDurationWarn() {
+  const el = $('#set-live-duration');
+  const help = $('#durHelp');
+  if (!el || !help) return;
+  const n = parseInt(el.value, 10) || 0;
+  if (n > 715) {
+    help.textContent = 'Di atas 715 menit. YouTube memotong arsip pada 12 jam, sesi lebih panjang berisiko terpotong.';
+    help.className = 'help help-err';
+  } else {
+    help.textContent = '715 menit = 11 jam 55 menit.';
+    help.className = 'help';
+  }
+}
+async function saveGlobalSettings(e) {
+  if (e) e.preventDefault();
+  const st = $('#saveStatus');
+  const btn = $('#saveBtn');
+  const secret = $('#set-client-secret').value.trim();
+  const payload = {
+    youtube_client_id: $('#set-client-id').value.trim(),
+    youtube_playlist_id: $('#set-playlist').value.trim(),
+    live_duration_minutes: parseInt($('#set-live-duration').value, 10) || 715,
+    record_segment_seconds: parseInt($('#set-segment').value, 10) || 3600,
+    disk_guard_min_gb: parseInt($('#set-guard').value, 10) || 10,
+    disk_retention_days: parseInt($('#set-retention').value, 10) || 7
+  };
+  if (secret) payload.youtube_client_secret = secret;
+  if (st) { st.textContent = 'Menyimpan'; st.className = 'st'; }
+  busyBtn(btn, true);
+  try {
+    await api.put(API + '/settings', payload);
+    if (st) { st.textContent = 'Pengaturan disimpan. Nilai baru berlaku pada proses berikutnya.'; st.className = 'st ok'; }
+    toast('ok', 'Pengaturan disimpan', 'Nilai baru berlaku pada proses berikutnya.');
+    loadGlobalSettings();
+    loadYouTubeStatus();
+  } catch (e2) {
+    if (st) { st.textContent = 'Pengaturan gagal disimpan. ' + e2.message; st.className = 'st err'; }
+    toast('err', 'Pengaturan gagal disimpan', e2.message);
+  } finally {
+    busyBtn(btn, false);
+  }
+}
+async function startYouTubeOAuth(btn) {
+  const st = $('#saveStatus');
+  const secret = $('#set-client-secret').value.trim();
+  busyBtn(btn, true);
+  try {
+    const pre = {
+      youtube_client_id: $('#set-client-id').value.trim(),
+      youtube_playlist_id: $('#set-playlist').value.trim()
+    };
+    if (secret) pre.youtube_client_secret = secret;
+    await api.put(API + '/settings', pre);
+    const data = await api.post(API + '/settings/youtube-auth-url');
+    if (!data || !data.url) throw new Error('URL otorisasi tidak tersedia');
+    window.open(data.url, '_blank', 'noopener');
+    if (st) { st.textContent = 'Tempel kode otorisasi dari Google di kolom bawah.'; st.className = 'st'; }
+    const code = $('#oauth-code');
+    if (code) code.focus();
+  } catch (e) {
+    toast('err', 'Otorisasi Google gagal', e.message);
+  } finally {
+    busyBtn(btn, false);
+  }
+}
+async function submitYouTubeOAuthCode(code, btn) {
+  const st = $('#saveStatus');
+  if (!code) {
+    toast('warn', 'Kode otorisasi belum diisi', 'Tempel kode dari halaman Google lebih dulu.');
+    return;
+  }
+  busyBtn(btn, true);
+  if (st) { st.textContent = 'Menghubungkan akun'; st.className = 'st'; }
+  try {
+    await api.post(API + '/settings/youtube-auth-code', { code });
+    toast('ok', 'Akun YouTube terhubung', null);
+    const inp = $('#oauth-code');
+    if (inp) inp.value = '';
+    loadGlobalSettings();
+    loadYouTubeStatus();
+  } catch (e) {
+    toast('err', 'Otorisasi Google gagal', e.message);
+    if (st) { st.textContent = 'Otorisasi gagal. ' + e.message; st.className = 'st err'; }
+  } finally {
+    busyBtn(btn, false);
+  }
+}
+function submitManualOAuthCode(btn) {
+  const inp = $('#oauth-code');
+  return submitYouTubeOAuthCode(inp ? inp.value.trim() : '', btn);
+}
+async function syncLiveToPlaylistManual(btn) {
+  busyBtn(btn, true);
+  try {
+    const data = await api.post(API + '/settings/youtube-sync-playlist');
+    toast('ok', 'Video live ditambahkan ke playlist', (data && data.message) || null);
+  } catch (e) {
+    if (/sudah ada/i.test(e.message)) toast('info', 'Video ini sudah ada di playlist', 'Tidak ada perubahan.');
+    else toast('err', 'Sinkronisasi playlist gagal', e.message);
+  } finally {
+    busyBtn(btn, false);
+  }
+}
+
+/* ── guide ───────────────────────────────────────────────────── */
+async function loadGuideContent() {
+  const box = $('#guide');
+  if (!box) return;
+  box.textContent = 'Memuat panduan';
+  try {
+    const res = await fetch('/panduan', { headers: { 'Accept': 'text/plain' } });
+    if (!res.ok) throw new Error('Panduan tidak tersedia (' + res.status + ')');
+    const text = await res.text();
+    box.textContent = text || 'Panduan kosong.';
+  } catch (e) {
+    box.textContent = e.message;
+  }
+}
+
+/* ── polling ─────────────────────────────────────────────────── */
+function visible() { return document.visibilityState === 'visible'; }
+function clockTick() {
+  const d = new Date();
+  const el = $('#clock');
+  if (el) el.textContent = hhmmss(d);
+  $$('[data-since]').forEach(node => {
+    const since = Number(node.dataset.since);
+    const v = upFrom(since);
+    const txt = v || node.dataset.none || '—';
+    if (node.textContent !== txt) node.textContent = txt;
+  });
+  if (state.quotaDeadline) {
+    const left = quotaLeft();
+    const node = $('#quotaLeft');
+    if (node) node.textContent = left > 0 ? fmtUp(left) : 'menunggu';
+    if (left === 0) state.quotaDeadline = 0;
+  }
+}
+function dispatcher() {
+  if (!visible()) return;
+  state.tick++;
+  clockTick();
+  if (state.tick % 5 === 0) {
+    fetchSystemStats();
+    if (state.page === 'monitor') { loadCameras(true); refreshSnapshots(); }
+  }
+  if (state.tick % 15 === 0) {
+    loadYouTubeStatus();
+    if (state.page === 'monitor') loadStorage();
+  }
+  if (state.tick % 3 === 0 && state.page === 'log') refreshTabLogs();
+  tickFsMeta();
+}
+
+/* ── actions table ───────────────────────────────────────────── */
+const ACT = {
+  add: () => resetForm(),
+  reload: () => refreshAll(),
+  refload: () => loadGuideContent(),
+  recstart: (id, el) => startRecord(id, el),
+  recstop: (id, el) => stopRecord(id, el),
+  livestart: (id, el) => startStream(id, el),
+  livestop: (id, el) => stopStream(id, el),
+  menu: (id, el) => openMenu(el, [
+    { act: 'playcam', id: id, icon: 'i-playback', label: 'Lihat rekaman' },
+    { act: 'camlog', id: id, icon: 'i-logs', label: 'Buka log kamera' },
+    { act: 'editcam', id: id, icon: 'i-settings', label: 'Ubah konfigurasi' },
+    { act: 'copyrtsp', id: id, icon: 'i-copy', label: 'Salin URL RTSP' },
+    { sep: true },
+    { act: 'delcam', id: id, icon: 'i-trash', label: 'Hapus kamera', danger: true }
+  ]),
+  livetoggle: (id, el) => toggleLive(id, el),
+  fullscreen: id => toggleFullscreen(id),
+  playcam: id => goToPlayback(id),
+  camlog: id => viewLogs(id),
+  editcam: id => editCamera(id),
+  copyrtsp: id => { const c = camById(id); copyText(c ? c.rtsp_url : '', 'URL RTSP disalin'); },
+  delcam: id => deleteCamera(id),
+  pbdate: d => selectPlaybackDate(d),
+  pbload: () => onPlaybackCameraChange(),
+  play: (url, el) => {
+    const row = el.closest('.trow');
+    const idx = row ? Number(row.dataset.row) : -1;
+    const s = state.pb.segments[idx];
+    if (s) playVideoSegment(s.url, s.filename, s.start_time, s.end_time, s.size_mb);
+  },
+  speed: v => setPlaybackSpeed(v),
+  zip: (id, el) => batchDownloadZip(el),
+  delseg: () => batchDeleteSegments(),
+  chan: c => switchLogChannel(c),
+  copylog: () => copyTabLogs(),
+  reflog: () => refreshTabLogs(),
+  oauth: (id, el) => startYouTubeOAuth(el),
+  oauthcode: (id, el) => submitManualOAuthCode(el),
+  sync: (id, el) => syncLiveToPlaylistManual(el)
+};
+
+document.addEventListener('click', e => {
+  const nav = e.target.closest('.nav-item');
+  if (nav) return;
+  const menuBtn = e.target.closest('[data-menu]');
+  if (menuBtn) {
+    const fn = ACT[menuBtn.dataset.menu];
+    const id = menuBtn.dataset.id;
+    closeMenu();
+    if (fn) fn(id, menuBtn);
+    return;
+  }
+  if (!e.target.closest('#menu')) closeMenu();
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const fn = ACT[el.dataset.act];
+  if (!fn) return;
+  if (el.tagName === 'A') return;
+  e.preventDefault();
+  fn(el.dataset.id, el);
+});
+
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-chg]');
+  if (!el) return;
+  const kind = el.dataset.chg;
+  if (kind === 'pbcam') onPlaybackCameraChange();
+  else if (kind === 'pball') toggleSelectAllSegments(el.checked);
+  else if (kind === 'seg') toggleSegmentSelect(el.dataset.path, el.checked);
+  else if (kind === 'logcam') onTabLogCamChange();
+  else if (kind === 'autoscroll') { state.log.auto = el.checked; el.setAttribute('aria-checked', el.checked ? 'true' : 'false'); paintLog(); }
+});
+
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-inp]');
+  if (!el) return;
+  if (el.dataset.inp === 'logfilter') { state.log.filter = el.value; paintLog(); }
+  if (el.id === 'set-live-duration') checkDurationWarn();
+});
+
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (!img || img.tagName !== 'IMG' || !img.classList.contains('snap-img')) return;
+  img.style.display = 'none';
+  const media = img.parentElement;
+  if (media && !media.querySelector('.media-err')) {
+    const box = document.createElement('div');
+    box.className = 'media-err';
+    box.innerHTML = '<svg class="ico" style="width:20px;height:20px" aria-hidden="true"><use href="#i-alert"/></svg>' +
+      '<span>Pratinjau tidak tersedia</span>';
+    media.appendChild(box);
+  }
+}, true);
+
+document.addEventListener('submit', e => {
+  if (e.target.id === 'camera-form') handleFormSubmit(e);
+  else if (e.target.id === 'settings-form') saveGlobalSettings(e);
+});
+
+document.addEventListener('keydown', e => {
+  const scrim = !$('#scrimAsk').hidden ? $('#scrimAsk') : (!$('#scrimForm').hidden ? $('#scrimForm') : null);
+  if (e.key === 'Escape') {
+    if (!$('#menu').hidden) { closeMenu(); e.preventDefault(); return; }
+    if (scrim) {
+      e.preventDefault();
+      if (scrim.id === 'scrimAsk') closeAsk(false);
+      else closeFormModal();
+      return;
+    }
+  }
+  if (e.key === 'Tab' && scrim) {
+    const f = $$('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])', scrim)
+      .filter(n => !n.disabled && n.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    return;
+  }
+  if (!$('#menu').hidden) {
+    const items = $$('#menu button');
+    const idx = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(idx - 1 + items.length) % items.length].focus(); }
+  }
+  const seg = e.target.closest('.seg');
+  if (seg && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End')) {
+    const tabs = $$('button:not(:disabled)', seg);
+    const i = tabs.indexOf(e.target);
+    if (i < 0) return;
+    e.preventDefault();
+    let n = i;
+    if (e.key === 'ArrowRight') n = (i + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') n = (i - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'Home') n = 0;
+    else n = tabs.length - 1;
+    tabs[n].focus();
+    tabs[n].click();
+  }
+});
+
+$('#askCancel').addEventListener('click', () => closeAsk(false));
+$('#askOk').addEventListener('click', () => closeAsk(true));
+$('#scrimAsk').addEventListener('click', e => { if (e.target.id === 'scrimAsk') closeAsk(false); });
+$('#formCancel').addEventListener('click', closeFormModal);
+$('#scrimForm').addEventListener('click', e => { if (e.target.id === 'scrimForm') closeFormModal(); });
+
+// kontrol kolom grid
+document.addEventListener('click', e => {
+  const b = e.target.closest('#colsCtl button');
+  if (!b) return;
+  const v = parseInt(b.dataset.cols, 10) || 0;
+  if (v > 0) localStorage.setItem(GRID_PREF_KEY, String(v));
+  else localStorage.removeItem(GRID_PREF_KEY);
+  applyGrid();
+});
+
+let gridResizeT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(gridResizeT);
+  gridResizeT = setTimeout(() => { if (gridPref() === 0) applyGrid(); }, 150);
+});
+
+/* ── boot ────────────────────────────────────────────────────── */
+function refreshAll() {
+  loadCameras(true);
+  fetchSystemStats();
+  loadYouTubeStatus();
+  loadStorage();
+  if (state.page === 'log') refreshTabLogs();
+  if (state.page === 'rekaman') onPlaybackCameraChange();
+  toast('info', 'Memuat ulang data', null);
+}
+
+window.addEventListener('hashchange', route);
+document.addEventListener('visibilitychange', () => { if (visible()) dispatcher(); });
+
+skeletonGrid();
+loadYouTubeStatus();
+loadCameras(true);
+fetchSystemStats();
+loadStorage();
+route();
+setInterval(dispatcher, 1000);
+</script>
+</body>
+</html>

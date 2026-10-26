@@ -1,0 +1,15 @@
+[
+  {
+    "id": "cctv-teras",
+    "name": "C200C TERAS",
+    "rtsp_url": "rtsp://admin:password@192.168.1.106:554/stream1",
+    "rtmp_url": "rtmp://a.rtmp.youtube.com/live2",
+    "stream_key": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "live_url": "https://youtube.com/playlist?list=PLxxxxxxxxxxxx",
+    "youtube_title_template": "{CCTV TERAS} - {date} {time} WIB",
+    "auto_start": true,
+    "enable_youtube": true,
+    "record_hdd": true,
+    "retention_days": 2
+  }
+]
