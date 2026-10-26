@@ -396,33 +396,102 @@ func cleanStaleBroadcasts(accessToken, streamKey string, ring *RingBuffer) {
 	}
 }
 
+type YouTubeBroadcastInfo struct {
+	ID              string
+	Status          string
+	ActualStartTime time.Time
+	IsNew           bool
+}
+
+func extractVideoID(rawURL string) string {
+	if rawURL == "" {
+		return ""
+	}
+	if strings.HasPrefix(rawURL, "https://youtu.be/") {
+		parts := strings.Split(strings.TrimPrefix(rawURL, "https://youtu.be/"), "?")
+		return parts[0]
+	}
+	if u, err := url.Parse(rawURL); err == nil {
+		if v := u.Query().Get("v"); v != "" {
+			return v
+		}
+		pathParts := strings.Split(strings.Trim(u.Path, "/"), "/")
+		if len(pathParts) > 0 && pathParts[len(pathParts)-1] != "" {
+			return pathParts[len(pathParts)-1]
+		}
+	}
+	return rawURL
+}
+
+func getAccessTokenFromSettings(s AppSettings) (string, error) {
+	var token string
+	var err error
+	for attempt := 1; attempt <= 3; attempt++ {
+		token, err = getYouTubeAccessToken(s.YouTubeClientID, s.YouTubeClientSecret, s.YouTubeRefreshToken)
+		if err == nil {
+			return token, nil
+		}
+		if attempt < 3 {
+			time.Sleep(3 * time.Second)
+		}
+	}
+	return "", err
+}
+
+func transitionYouTubeBroadcast(accessToken, broadcastID, targetStatus string) error {
+	if accessToken == "" || broadcastID == "" {
+		return nil
+	}
+	client := &http.Client{Timeout: 10 * time.Second}
+	transURL := fmt.Sprintf("https://www.googleapis.com/youtube/v3/liveBroadcasts/transition?broadcastStatus=%s&id=%s&part=id,status",
+		url.QueryEscape(targetStatus), url.QueryEscape(broadcastID))
+	req, err := http.NewRequest("POST", transURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Accept", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		errResp := apiErrFromResponse(resp, "liveBroadcasts.transition")
+		if strings.Contains(errResp.Error(), "redundantTransition") {
+			return nil
+		}
+		return errResp
+	}
+	return nil
+}
+
 // ensureYouTubeBroadcast mencari broadcast yang masih hidup (ready/testing/live) terikat
-// pada stream key kamera dan menggunakannya kembali. Hanya membuat broadcast baru jika
-// tidak ada yang cocok — mencegah duplikat siaran di playlist.
-func ensureYouTubeBroadcast(accessToken, streamKey, cameraName, titleTemplate string, allowCreate bool) (string, error) {
+// pada stream key kamera dan menggunakannya kembali jika belum mencapai batas rotasi.
+// Jika sudah lewat batas rotasi, siaran lama ditutup (complete) dan siaran baru dibuat.
+func ensureYouTubeBroadcast(accessToken, streamKey, cameraName, titleTemplate string, maxAgeMinutes int, allowCreate bool) (*YouTubeBroadcastInfo, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	targetStreamID, err := findYouTubeStreamID(accessToken, streamKey)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// 1. Cari broadcast lama terikat stream key yang AKTIF ('live' atau 'liveStarting') → reuse.
-	// Catatan: JANGAN reuse broadcast yang masih 'ready' jika dibuat lebih dari 2 menit lalu,
-	// karena siaran 'ready' yang sempat kehilangan trigger enableAutoStart tidak akan pernah live.
+	// 1. Cari broadcast lama terikat stream key yang AKTIF ('live' atau 'liveStarting') → reuse jika valid.
 	listURL := "https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id,snippet,status,contentDetails&mine=true&maxResults=50"
 	reqList, _ := http.NewRequest("GET", listURL, nil)
 	reqList.Header.Set("Authorization", "Bearer "+accessToken)
 	if resp, err := client.Do(reqList); err == nil {
 		defer resp.Body.Close()
 		if resp.StatusCode >= 400 {
-			return "", apiErrFromResponse(resp, "liveBroadcasts.list")
+			return nil, apiErrFromResponse(resp, "liveBroadcasts.list")
 		}
 		var data struct {
 			Items []struct {
 				ID      string `json:"id"`
 				Snippet struct {
 					ScheduledStartTime string `json:"scheduledStartTime"`
+					ActualStartTime    string `json:"actualStartTime"`
 				} `json:"snippet"`
 				Status struct {
 					LifeCycleStatus string `json:"lifeCycleStatus"`
@@ -436,13 +505,41 @@ func ensureYouTubeBroadcast(accessToken, streamKey, cameraName, titleTemplate st
 			for _, it := range data.Items {
 				if it.ContentDetails.BoundStreamID == targetStreamID {
 					if it.Status.LifeCycleStatus == "live" || it.Status.LifeCycleStatus == "liveStarting" {
-						return it.ID, nil
+						var startTime time.Time
+						if it.Snippet.ActualStartTime != "" {
+							startTime, _ = time.Parse(time.RFC3339, it.Snippet.ActualStartTime)
+						}
+						if startTime.IsZero() && it.Snippet.ScheduledStartTime != "" {
+							startTime, _ = time.Parse(time.RFC3339, it.Snippet.ScheduledStartTime)
+						}
+						if startTime.IsZero() {
+							startTime = time.Now()
+						}
+
+						// Jika siaran sudah melampaui rotasi, selesaikan (complete) agar YouTube mengarsipkannya
+						if maxAgeMinutes > 0 && time.Since(startTime) >= time.Duration(maxAgeMinutes)*time.Minute {
+							_ = transitionYouTubeBroadcast(accessToken, it.ID, "complete")
+							time.Sleep(5 * time.Second)
+							break
+						}
+
+						return &YouTubeBroadcastInfo{
+							ID:              it.ID,
+							Status:          it.Status.LifeCycleStatus,
+							ActualStartTime: startTime,
+							IsNew:           false,
+						}, nil
 					}
 					// Jika ready tapi baru dibuat (< 90 detik), masih boleh reuse
 					if it.Status.LifeCycleStatus == "ready" {
 						if tStart, errT := time.Parse(time.RFC3339, it.Snippet.ScheduledStartTime); errT == nil {
 							if time.Since(tStart) < 90*time.Second {
-								return it.ID, nil
+								return &YouTubeBroadcastInfo{
+									ID:              it.ID,
+									Status:          "ready",
+									ActualStartTime: tStart,
+									IsNew:           false,
+								}, nil
 							}
 						}
 					}
@@ -452,10 +549,8 @@ func ensureYouTubeBroadcast(accessToken, streamKey, cameraName, titleTemplate st
 	}
 
 	// 2. Belum ada → buat broadcast baru (Unlisted, autoStart, autoStop)
-	// Guard: jika allowCreate=false (broadcast baru saja dibuat <15 menit lalu),
-	// JANGAN buat baru — hemat kuota API. Biarkan siaran lama dipakai / user tunggu.
 	if !allowCreate {
-		return "", fmt.Errorf("broadcast guard aktif: siaran baru saja dibuat <15 menit lalu, tidak membuat broadcast baru demi menghemat kuota API")
+		return nil, fmt.Errorf("broadcast guard aktif: siaran baru saja dibuat <15 menit lalu, tidak membuat broadcast baru demi menghemat kuota API")
 	}
 
 	now := time.Now()
@@ -482,20 +577,20 @@ func ensureYouTubeBroadcast(accessToken, streamKey, cameraName, titleTemplate st
 
 	createResp, err := client.Do(createReq)
 	if err != nil {
-		return "", fmt.Errorf("gagal create liveBroadcast: %v", err)
+		return nil, fmt.Errorf("gagal create liveBroadcast: %v", err)
 	}
 	defer createResp.Body.Close()
 
 	if createResp.StatusCode >= 400 {
 		errBytes, _ := io.ReadAll(createResp.Body)
-		return "", fmt.Errorf("createBroadcast status %d: %s", createResp.StatusCode, string(errBytes))
+		return nil, fmt.Errorf("createBroadcast status %d: %s", createResp.StatusCode, string(errBytes))
 	}
 
 	var createdBroadcast struct {
 		ID string `json:"id"`
 	}
 	if err := json.NewDecoder(createResp.Body).Decode(&createdBroadcast); err != nil || createdBroadcast.ID == "" {
-		return "", fmt.Errorf("gagal decode created broadcast ID")
+		return nil, fmt.Errorf("gagal decode created broadcast ID")
 	}
 
 	// 3. Bind Broadcast ke Stream Key
@@ -505,11 +600,16 @@ func ensureYouTubeBroadcast(accessToken, streamKey, cameraName, titleTemplate st
 	bindReq.Header.Set("Authorization", "Bearer "+accessToken)
 	bindResp, err := client.Do(bindReq)
 	if err != nil {
-		return "", fmt.Errorf("gagal bind broadcast: %v", err)
+		return nil, fmt.Errorf("gagal bind broadcast: %v", err)
 	}
 	defer bindResp.Body.Close()
 
-	return createdBroadcast.ID, nil
+	return &YouTubeBroadcastInfo{
+		ID:              createdBroadcast.ID,
+		Status:          "ready",
+		ActualStartTime: now,
+		IsNew:           true,
+	}, nil
 }
 
 // waitForBroadcastLive memantau lifecycle broadcast sampai benar-benar "live"
@@ -847,6 +947,26 @@ func (cs *CameraStore) SetStreamStatus(id, status, errorMsg string, startedAt in
 	_ = cs.save()
 }
 
+func (cs *CameraStore) SetLiveInfo(id, videoID string, startedAt int64) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	for i, c := range cs.cameras {
+		if c.ID == id {
+			if videoID != "" {
+				cs.cameras[i].LiveUrl = "https://youtu.be/" + videoID
+			}
+			if startedAt > 0 {
+				cs.cameras[i].StreamStartedAt = startedAt
+				if cs.cameras[i].StartedAt == 0 {
+					cs.cameras[i].StartedAt = startedAt
+				}
+			}
+			break
+		}
+	}
+	_ = cs.save()
+}
+
 func deriveLegacyStatus(recordStatus, streamStatus string) string {
 	if recordStatus == "RECORDING" || streamStatus == "STREAMING" {
 		return "LIVE"
@@ -1081,17 +1201,7 @@ func (e *StreamEngine) StartStream(id string) error {
 		}
 
 		if s.YouTubeClientID != "" && s.YouTubeClientSecret != "" && s.YouTubeRefreshToken != "" {
-			var token string
-			var err error
-			for attempt := 1; attempt <= 3; attempt++ {
-				token, err = getYouTubeAccessToken(s.YouTubeClientID, s.YouTubeClientSecret, s.YouTubeRefreshToken)
-				if err == nil {
-					break
-				}
-				if attempt < 3 {
-					time.Sleep(4 * time.Second)
-				}
-			}
+			token, err := getAccessTokenFromSettings(s)
 			if err != nil {
 				logs.YouTube.Append(fmt.Sprintf("[YouTube Auto-Playlist] Gagal refresh token: %v", err))
 			} else {
@@ -1104,7 +1214,13 @@ func (e *StreamEngine) StartStream(id string) error {
 				lastCreateMu.Unlock()
 
 				cleanStaleBroadcasts(token, cam.StreamKey, logs.YouTube)
-				videoID, errBc := ensureYouTubeBroadcast(token, cam.StreamKey, cam.Name, cam.YouTubeTitleTemplate, allowCreate)
+
+				rotMins := s.LiveDurationMinutes
+				if rotMins <= 0 {
+					rotMins = 715
+				}
+
+				bcInfo, errBc := ensureYouTubeBroadcast(token, cam.StreamKey, cam.Name, cam.YouTubeTitleTemplate, rotMins, allowCreate)
 				if errBc != nil {
 					errStr := errBc.Error()
 					if strings.Contains(errStr, "quotaExceeded") || strings.Contains(errStr, "kuota YouTube API habis") {
@@ -1115,17 +1231,24 @@ func (e *StreamEngine) StartStream(id string) error {
 					}
 					logs.YouTube.Append(fmt.Sprintf("[YouTube Auto-Broadcast] %v", errBc))
 				} else {
-					// Track last broadcast creation time
-					lastCreateMu.Lock()
-					lastBroadcastCreate[cam.StreamKey] = time.Now()
-					lastCreateMu.Unlock()
+					videoID := bcInfo.ID
+					e.store.SetLiveInfo(id, videoID, bcInfo.ActualStartTime.Unix())
+					e.store.SetStreamStatus(id, "STREAMING", "", bcInfo.ActualStartTime.Unix())
 
-					if playlistID != "" {
-						if errPl := addVideoToYouTubePlaylist(token, playlistID, videoID); errPl != nil {
-							logs.YouTube.Append(fmt.Sprintf("[YouTube Auto-Playlist] Gagal sync playlist: %v", errPl))
-						} else {
-							logs.YouTube.Append(fmt.Sprintf("[YouTube Auto-Playlist] SUKSES! Siaran otomatis dibuat & sync ke playlist (%s): https://youtu.be/%s", playlistID, videoID))
+					if bcInfo.IsNew {
+						lastCreateMu.Lock()
+						lastBroadcastCreate[cam.StreamKey] = time.Now()
+						lastCreateMu.Unlock()
+
+						if playlistID != "" {
+							if errPl := addVideoToYouTubePlaylist(token, playlistID, videoID); errPl != nil {
+								logs.YouTube.Append(fmt.Sprintf("[YouTube Auto-Playlist] Gagal sync playlist: %v", errPl))
+							} else {
+								logs.YouTube.Append(fmt.Sprintf("[YouTube Auto-Playlist] SUKSES! Siaran otomatis dibuat & sync ke playlist (%s): https://youtu.be/%s", playlistID, videoID))
+							}
 						}
+					} else {
+						logs.YouTube.Append(fmt.Sprintf("[YouTube Auto-Broadcast] Menggunakan sesi siaran aktif: https://youtu.be/%s (mulai sejak %s)", videoID, bcInfo.ActualStartTime.Format("02/01 15:04 WIB")))
 					}
 					go waitForBroadcastLive(token, videoID, logs.YouTube)
 				}
@@ -1150,6 +1273,23 @@ func (e *StreamEngine) StopStream(id string) error {
 	e.mu.Unlock()
 
 	e.store.SetStreamStatus(id, "STOPPED", "", 0)
+
+	// Tutup siaran YouTube secara eksplisit agar langsung selesai (complete) dan diarsipkan
+	go func() {
+		cam, ok := e.store.Get(id)
+		if !ok || !cam.EnableYouTube || cam.LiveUrl == "" {
+			return
+		}
+		vidID := extractVideoID(cam.LiveUrl)
+		if vidID == "" {
+			return
+		}
+		token, err := getAccessTokenFromSettings(e.settingsStore.Get())
+		if err == nil && token != "" {
+			_ = transitionYouTubeBroadcast(token, vidID, "complete")
+		}
+	}()
+
 	return nil
 }
 
@@ -1354,11 +1494,14 @@ func (e *StreamEngine) runRecordWorker(ctx context.Context, id string, ring *Rin
 }
 
 // runStreamWorker runs FFmpeg loop that ONLY does YouTube RTMP streaming.
-// Has rotation timer (715 min). On RTSP failure for >3 minutes continuously,
-// AUTO-STOP YouTube streaming and set StreamStatus='OFFLINE'.
+// Has rotation timer (715 min) tracked against YouTube broadcast session epoch.
+// On RTSP failure for >3 minutes continuously, AUTO-STOP YouTube streaming and set StreamStatus='OFFLINE'.
 func (e *StreamEngine) runStreamWorker(ctx context.Context, id string, ring *RingBuffer) {
 	var rtspFailStart time.Time
 	rtspFailing := false
+
+	var broadcastDeadline time.Time
+	var currentBroadcastID string
 
 	for {
 		select {
@@ -1376,6 +1519,62 @@ func (e *StreamEngine) runStreamWorker(ctx context.Context, id string, ring *Rin
 			ring.Append(fmt.Sprintf("[%s] [Stream] YouTube streaming tidak aktif. Worker berhenti.", time.Now().Format("15:04:05")))
 			e.store.SetStreamStatus(id, "STOPPED", "", 0)
 			return
+		}
+
+		currSettings := e.settingsStore.Get()
+		rotMins := currSettings.LiveDurationMinutes
+		if rotMins <= 0 {
+			rotMins = 715
+		}
+
+		// Inisialisasi target rotasi siaran jika belum diset
+		if broadcastDeadline.IsZero() {
+			if cam.StreamStartedAt > 0 {
+				broadcastDeadline = time.Unix(cam.StreamStartedAt, 0).Add(time.Duration(rotMins) * time.Minute)
+			} else {
+				broadcastDeadline = time.Now().Add(time.Duration(rotMins) * time.Minute)
+			}
+			currentBroadcastID = extractVideoID(cam.LiveUrl)
+		}
+
+		// Cek rotasi: jika waktu sekarang sudah mencapai/melampaui target batas siaran
+		now := time.Now()
+		if now.After(broadcastDeadline) {
+			ring.Append(fmt.Sprintf("[%s] [Stream] Durasi batas siaran YouTube (%dm) tercapai. Menutup siaran lama dan memutar ke sesi baru...", now.Format("15:04:05"), rotMins))
+			token, errTok := getAccessTokenFromSettings(currSettings)
+			if errTok == nil && token != "" {
+				if currentBroadcastID != "" {
+					_ = transitionYouTubeBroadcast(token, currentBroadcastID, "complete")
+					ring.Append(fmt.Sprintf("[%s] [YouTube] Siaran lama (%s) ditutup (complete) untuk diarsipkan YouTube.", time.Now().Format("15:04:05"), currentBroadcastID))
+					time.Sleep(5 * time.Second)
+				}
+
+				bcInfo, errBc := ensureYouTubeBroadcast(token, cam.StreamKey, cam.Name, cam.YouTubeTitleTemplate, rotMins, true)
+				if errBc == nil && bcInfo != nil {
+					currentBroadcastID = bcInfo.ID
+					e.store.SetLiveInfo(id, bcInfo.ID, bcInfo.ActualStartTime.Unix())
+					e.store.SetStreamStatus(id, "STREAMING", "", bcInfo.ActualStartTime.Unix())
+					broadcastDeadline = bcInfo.ActualStartTime.Add(time.Duration(rotMins) * time.Minute)
+
+					if bcInfo.IsNew {
+						lastCreateMu.Lock()
+						lastBroadcastCreate[cam.StreamKey] = time.Now()
+						lastCreateMu.Unlock()
+
+						if cam.YouTubePlaylistID != "" {
+							_ = addVideoToYouTubePlaylist(token, cam.YouTubePlaylistID, bcInfo.ID)
+						}
+					}
+					ring.Append(fmt.Sprintf("[%s] [YouTube] Sesi siaran baru aktif: https://youtu.be/%s", time.Now().Format("15:04:05"), bcInfo.ID))
+					go waitForBroadcastLive(token, bcInfo.ID, ring)
+				} else {
+					ring.Append(fmt.Sprintf("[%s] [YouTube Auto-Rotate] Gagal buat broadcast baru: %v. Coba lagi dalam 15m.", time.Now().Format("15:04:05"), errBc))
+					broadcastDeadline = time.Now().Add(15 * time.Minute)
+				}
+			} else {
+				ring.Append(fmt.Sprintf("[%s] [YouTube Auto-Rotate] Gagal refresh token: %v. Coba lagi dalam 15m.", time.Now().Format("15:04:05"), errTok))
+				broadcastDeadline = time.Now().Add(15 * time.Minute)
+			}
 		}
 
 		target := strings.TrimRight(cam.RTMPUrl, "/") + "/" + strings.TrimLeft(cam.StreamKey, "/")
@@ -1401,13 +1600,11 @@ func (e *StreamEngine) runStreamWorker(ctx context.Context, id string, ring *Rin
 
 		ring.Append(fmt.Sprintf("[%s] [Stream] Starting FFmpeg YouTube RTMP for %s...", time.Now().Format("15:04:05"), cam.Name))
 
-		currSettings := e.settingsStore.Get()
-		rotMins := currSettings.LiveDurationMinutes
-		if rotMins <= 0 {
-			rotMins = 715
+		remaining := time.Until(broadcastDeadline)
+		if remaining < 10*time.Second {
+			remaining = 10 * time.Second
 		}
-
-		sessionCtx, sessionCancel := context.WithTimeout(ctx, time.Duration(rotMins)*time.Minute)
+		sessionCtx, sessionCancel := context.WithTimeout(ctx, remaining)
 
 		cmd := exec.CommandContext(sessionCtx, "ffmpeg", args...)
 		stderr, err := cmd.StderrPipe()
@@ -1445,9 +1642,8 @@ func (e *StreamEngine) runStreamWorker(ctx context.Context, id string, ring *Rin
 		default:
 		}
 
-		if sessionCtx.Err() == context.DeadlineExceeded {
+		if sessionCtx.Err() == context.DeadlineExceeded || time.Now().After(broadcastDeadline) {
 			ring.Append(fmt.Sprintf("[%s] [Stream] Sesi %dm tercapai. Auto-rotate ke sesi live YouTube berikutnya dalam 5s...", time.Now().Format("15:04:05"), rotMins))
-			// Reset failure tracking on rotation
 			rtspFailing = false
 			rtspFailStart = time.Time{}
 		} else if waitErr != nil {
@@ -1462,7 +1658,6 @@ func (e *StreamEngine) runStreamWorker(ctx context.Context, id string, ring *Rin
 			// If RTSP has been failing for >3 minutes, auto-stop and go OFFLINE
 			if rtspFailing && time.Since(rtspFailStart) > 3*time.Minute {
 				ring.Append(fmt.Sprintf("[%s] [Stream] Kamera RTSP tidak tersambung >3 menit. YouTube Live dihentikan otomatis. Klik Mulai Live untuk memulai ulang.", time.Now().Format("15:04:05")))
-				// Release worker slot + cancel context (hindari kebocoran goroutine/context)
 				e.mu.Lock()
 				if w, ok := e.sessions[id]; ok && w != nil {
 					if w.stream != nil && w.stream.cancel != nil {
@@ -2594,11 +2789,12 @@ func main() {
 			}
 		}
 
-		videoID, err := ensureYouTubeBroadcast(token, streamKey, camName, titleTpl, true)
+		bcInfo, err := ensureYouTubeBroadcast(token, streamKey, camName, titleTpl, 715, true)
 		if err != nil {
 			jsonError(w, http.StatusInternalServerError, "Gagal create/find live broadcast: "+err.Error())
 			return
 		}
+		videoID := bcInfo.ID
 
 		if err := addVideoToYouTubePlaylist(token, targetPlaylist, videoID); err != nil {
 			jsonError(w, http.StatusInternalServerError, "Gagal menambahkan video ke playlist: "+err.Error())
